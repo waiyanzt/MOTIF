@@ -1,0 +1,21 @@
+% Requires \usepackage{booktabs}
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Input & MRR & Hits@1 & Hits@3 & Hits@10 \\
+\midrule
+compiled/v1 & $0.1804 \pm 0.0082$ & $0.0635 \pm 0.0084$ & $0.1355 \pm 0.0118$ & $0.4688 \pm 0.0176$ \\
+compiled/v2 & $0.1804 \pm 0.0082$ & $0.0635 \pm 0.0084$ & $0.1355 \pm 0.0118$ & $0.4688 \pm 0.0176$ \\
+compiled/v3 & $0.1804 \pm 0.0082$ & $0.0635 \pm 0.0084$ & $0.1355 \pm 0.0118$ & $0.4688 \pm 0.0176$ \\
+compiled/v4 & $0.1804 \pm 0.0082$ & $0.0635 \pm 0.0084$ & $0.1355 \pm 0.0118$ & $0.4688 \pm 0.0176$ \\
+physical/v1 & $0.1802 \pm 0.0082$ & $0.0624 \pm 0.0085$ & $0.1379 \pm 0.0120$ & $0.4580 \pm 0.0175$ \\
+physical/v2 & $0.1901 \pm 0.0087$ & $0.0755 \pm 0.0093$ & $0.1487 \pm 0.0123$ & $0.4652 \pm 0.0175$ \\
+physical/v3 & $0.1553 \pm 0.0068$ & $0.0396 \pm 0.0068$ & $0.1055 \pm 0.0107$ & $0.4436 \pm 0.0171$ \\
+physical/v4 & $0.1984 \pm 0.0090$ & $0.0791 \pm 0.0094$ & $0.1667 \pm 0.0134$ & $0.4748 \pm 0.0174$ \\
+\bottomrule
+\end{tabular}
+\caption{MOTIF / IMDb / Movie-Year (20-candidate link prediction). Preliminary frozen zero-shot evaluation on the test split; 834 queries. Tail-only ranking over the true year plus 19 fixed frequency-matched negative years per query. Tied scores use average rank. Values are estimates plus/minus bootstrap standard error from 1000 query resamples.}
+\label{tab:motif-movie_year-link_prediction}
+\end{table}
