@@ -1,0 +1,19 @@
+% Requires \usepackage{booktabs}
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Input & MRR & Hits@1 & Hits@3 & Hits@10 \\
+\midrule
+compiled/v1 & $0.5761 \pm 0.0066$ & $0.3796 \pm 0.0092$ & $0.7198 \pm 0.0082$ & $0.9392 \pm 0.0048$ \\
+compiled/v2 & $0.5761 \pm 0.0066$ & $0.3796 \pm 0.0092$ & $0.7198 \pm 0.0082$ & $0.9392 \pm 0.0048$ \\
+compiled/v3 & $0.5761 \pm 0.0066$ & $0.3796 \pm 0.0092$ & $0.7198 \pm 0.0082$ & $0.9392 \pm 0.0048$ \\
+physical/v1 & $0.5810 \pm 0.0067$ & $0.3886 \pm 0.0093$ & $0.7243 \pm 0.0082$ & $0.9370 \pm 0.0050$ \\
+physical/v2 & $0.5696 \pm 0.0069$ & $0.3800 \pm 0.0094$ & $0.7052 \pm 0.0084$ & $0.9280 \pm 0.0052$ \\
+physical/v3 & $0.5727 \pm 0.0068$ & $0.3830 \pm 0.0092$ & $0.7089 \pm 0.0083$ & $0.9351 \pm 0.0050$ \\
+\bottomrule
+\end{tabular}
+\caption{MOTIF / DBLP / Paper-Conference (20-candidate link prediction). Preliminary frozen zero-shot evaluation on the test split; 2666 queries. Tail-only ranking over all 20 conferences. Tied scores use average rank. Values are estimates plus/minus bootstrap standard error from 1000 query resamples.}
+\label{tab:motif-paper_conference-link_prediction}
+\end{table}

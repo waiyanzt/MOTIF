@@ -1,0 +1,19 @@
+% Requires \usepackage{booktabs}
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+Input & Accuracy & Precision (macro) & Recall (macro) & Micro-F1 & Macro-F1 \\
+\midrule
+compiled/v1 & $0.3796 \pm 0.0092$ & $0.3061 \pm 0.0128$ & $0.3129 \pm 0.0091$ & $0.3796 \pm 0.0092$ & $0.2957 \pm 0.0093$ \\
+compiled/v2 & $0.3796 \pm 0.0092$ & $0.3061 \pm 0.0128$ & $0.3129 \pm 0.0091$ & $0.3796 \pm 0.0092$ & $0.2957 \pm 0.0093$ \\
+compiled/v3 & $0.3796 \pm 0.0092$ & $0.3061 \pm 0.0128$ & $0.3129 \pm 0.0091$ & $0.3796 \pm 0.0092$ & $0.2957 \pm 0.0093$ \\
+physical/v1 & $0.3886 \pm 0.0093$ & $0.3203 \pm 0.0140$ & $0.3077 \pm 0.0090$ & $0.3886 \pm 0.0093$ & $0.2955 \pm 0.0094$ \\
+physical/v2 & $0.3800 \pm 0.0094$ & $0.3339 \pm 0.0161$ & $0.2907 \pm 0.0084$ & $0.3800 \pm 0.0094$ & $0.2831 \pm 0.0096$ \\
+physical/v3 & $0.3830 \pm 0.0092$ & $0.3231 \pm 0.0152$ & $0.2938 \pm 0.0084$ & $0.3830 \pm 0.0092$ & $0.2847 \pm 0.0093$ \\
+\bottomrule
+\end{tabular}
+\caption{MOTIF / DBLP / Paper-Conference (full-type classification: 20 classes). Preliminary frozen zero-shot evaluation on the test split; 2666 queries. Predict the actual conference among all 20 target-type entities. Precision and recall are macro-averaged over this fixed class set with zero division set to zero. Micro-F1 equals accuracy for single-label prediction. Top-1 ties use the smallest global entity ID. Values are estimates plus/minus bootstrap standard error from 1000 query resamples.}
+\label{tab:motif-paper_conference-classification}
+\end{table}
