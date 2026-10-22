@@ -1,0 +1,250 @@
+# HPC zero-shot runbook
+
+Use this for the preliminary frozen-checkpoint experiments on IMDb and DBLP.
+Commands run from the MOTIF repository root in Bash. GPU allocation is handled
+separately. The inference commands need a CUDA GPU; preparation and reporting
+can run on CPU. No training or optimizer updates occur.
+
+If IMDb preprocessing is already complete and your environment is active,
+start at **step 4** after restoring the environment exports in step 1.
+
+## 1. Restore the environment in each GPU job
+
+Use your cluster's actual module names for Python 3.10, GCC and CUDA 12.1.
+The GCC 12.2 module below matches the compiler in the reported HPC build log.
+With the lazy native-extension import described below, Triton inference does not
+require switching to GCC 11. Retain the working module versions from your setup.
+If `.venv/` does not exist yet, complete step 2 after loading the modules and
+entering the repository, then return to the activation and exports below.
+
+```bash
+module load python/3.10
+module load gcc/12.2
+module load cuda/12.1
+
+cd /nfs/hpc/share/tinw/idealab/MOTIF
+source .venv/bin/activate
+
+export CC="$(command -v gcc)"
+export CXX="$(command -v g++)"
+export TORCH_CUDA_ARCH_LIST="9.0"  # H100
+export TORCH_EXTENSIONS_DIR="$PWD/.cache/torch_extensions_cu121_h100"
+export TRITON_CACHE_DIR="$PWD/.cache/triton"
+export MAX_JOBS=4
+export PYTHONHASHSEED=0
+export CUBLAS_WORKSPACE_CONFIG=:4096:8
+export PYTHONUNBUFFERED=1
+
+mkdir -p logs "$TORCH_EXTENSIONS_DIR" "$TRITON_CACHE_DIR"
+```
+
+The architecture setting above is for H100. If using another GPU, use its
+appropriate architecture and a separate extension-cache directory.
+
+The local `motif/rspmm/__init__.py` loads the bundled C++/CUDA extension only when
+`generalized_rspmm` is called. Importing the Triton modules does not build that
+extension. This changes import timing; the model, checkpoint, Lift and Triton
+kernels are unchanged. Sync this file to the HPC along with the adapter.
+Keep the compiler module available for Triton's own compilation support.
+The native backend still needs a compatible GCC/nvcc setup if explicitly used.
+
+## 2. One-time venv setup, if needed
+
+Skip this if dependencies are already installed. After loading the modules and
+entering the repository, create the venv if it does not exist:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+
+python -m pip install numpy==1.26.4
+python -m pip install torch==2.1.0 --index-url https://download.pytorch.org/whl/cu121
+python -m pip install --only-binary=:all: torch-scatter==2.1.2 torch-sparse==0.6.18 -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
+python -m pip install -r requirements-eval.txt
+```
+
+Use the CUDA build above for inference. The CPU-only Torch installation in the
+preprocessing guide is intended for a separate CPU preprocessing environment.
+
+## 3. Prepare the raw data once
+
+Expected layout:
+
+```text
+rai-datasets/
+  raw/
+    IMDB/movie_metadata.csv
+    DBLP/{author_label.txt,paper_author.txt,paper_conf.txt,paper_term.txt}
+  preprocessed/
+    IMDB/          # adapter-ready export
+    DBLP/          # adapter-ready export
+    _build/        # intermediate splits and graph.pt bundles
+```
+
+Place the raw files yourself, then prepare the desired task:
+
+```bash
+mkdir -p rai-datasets/raw/IMDB rai-datasets/raw/DBLP
+
+# IMDb Movie-Year only: v1-v4, with no universal arm.
+python script/prepare_imdb_lp.py --tasks movie_year
+
+# Alternatively, prepare both Movie-Year and Movie-Director.
+# python script/prepare_imdb_lp.py
+
+# DBLP, when its raw files are available.
+# python script/prepare_dblp_lp.py
+```
+
+Do not rerun preparation for every inference experiment. Reuse the resulting
+export at `rai-datasets/preprocessed/IMDB/` or `DBLP/`. Existing build and export
+directories are rejected. See [data preparation](DATA_PREPARATION.md) for
+`--bundle-root`, `--work-dir`, `--output` and old-layout migration options.
+
+## 4. Run IMDb Movie-Year smoke evaluation
+
+Run inside the GPU allocation after step 1. This evaluates the same fixed subset
+of 64 queries on four physical variants, four compiled views, and a separate
+physical v1 repeat: **nine inference processes**, run sequentially on one GPU.
+Both the 20-candidate link-prediction metrics and full 91-year classification
+metrics are calculated from this run.
+
+```bash
+set -o pipefail
+
+python -u script/eval_lp.py --dataset imdb --task movie_year --limit 64 --run-tag smoke64 2>&1 | tee logs/imdb_movie_year_smoke64.log
+```
+
+The first model forward can take longer while Triton kernels compile.
+Inference has not yet been validated on this HPC setup; a
+successful run is the first runtime validation, not a claim of upstream parity.
+
+If it fails, keep the log and send the error. Stop before starting the full run.
+
+## 5. Generate smoke reports and LaTeX
+
+After inference finishes successfully:
+
+```bash
+python script/report_lp.py --dataset imdb --run-tag smoke64
+```
+
+Outputs:
+
+```text
+results/motif_zeroshot_imdb_lp_smoke64/
+  movie_year/
+    physical/v1/{metrics.json,scores.npz}
+    physical/v1__repeat/{metrics.json,scores.npz}
+    ...
+    compiled/v1/{metrics.json,scores.npz}
+    ...
+  tables/
+    report.md
+    summary.json
+    performance.csv
+    invariance.csv
+    link_prediction.tex
+    classification.tex
+    invariance.tex
+    controls.tex
+```
+
+Start with `tables/report.md`. It shows performance, all six physical v1-v4
+comparisons, the reference repeat and agreement among compiled views. Smoke
+outputs are explicitly labeled as limited-query preliminary results.
+
+## 6. Run the full Movie-Year test set
+
+Once the smoke outputs look sensible:
+
+```bash
+python -u script/eval_lp.py --dataset imdb --task movie_year --run-tag full 2>&1 | tee logs/imdb_movie_year_full.log
+python script/report_lp.py --dataset imdb --run-tag full
+```
+
+This uses all 834 held-out Movie-Year test queries. Outputs go to
+`results/motif_zeroshot_imdb_lp_full/`.
+
+For scientific reporting, also reproduce the checkpoint's upstream benchmark and
+validate numerical agreement with its scoring path. The experiments remain
+preliminary until that validation is complete.
+
+## 7. Optional additional tasks
+
+These require the corresponding preprocessing to be complete. Use distinct tags
+so existing Movie-Year output directories do not conflict:
+
+```bash
+# Movie-Director: physical v1/v3, compiled views, and v1 repeat.
+python script/eval_lp.py --dataset imdb --task movie_director --run-tag director_full
+python script/report_lp.py --dataset imdb --run-tag director_full
+
+# Both IMDb tasks, if both were prepared.
+python script/eval_lp.py --dataset imdb --run-tag both_full
+python script/report_lp.py --dataset imdb --run-tag both_full
+
+# DBLP Paper-Conference smoke, then full.
+python script/eval_lp.py --dataset dblp --limit 64 --run-tag smoke64
+python script/report_lp.py --dataset dblp --run-tag smoke64
+python script/eval_lp.py --dataset dblp --run-tag full
+python script/report_lp.py --dataset dblp --run-tag full
+```
+
+## 8. Preserve and share the results
+
+Keep `metrics.json`, `scores.npz`, the tables and the terminal log. Raw per-query
+scores let us recompute metrics and investigate differences later. For example:
+
+```bash
+tar -czf results/imdb_movie_year_smoke64_results.tar.gz results/motif_zeroshot_imdb_lp_smoke64 logs/imdb_movie_year_smoke64.log
+```
+
+The full results directory is preferable to only the LaTeX table when reviewing
+numerical behavior. Preprocessing and score arrays remain git-ignored; summary
+tables and JSON reports are eligible for version control.
+
+## Table definitions
+
+* `link_prediction.tex`: true tail plus 19 supplied negatives, tail-only MRR and
+  Hits@1/3/10, with average ranks for ties.
+* `classification.tex`: actual year prediction over all 91 years for Movie-Year;
+  accuracy, macro-precision, macro-recall, Micro-F1 and Macro-F1. Micro-F1 equals
+  accuracy for this single-label setting.
+* `invariance.tex`: all six physical Movie-Year pairs, with separate Agreement@1
+  and Kendall tau-b columns over the original 20 candidates.
+* `controls.tex`: the independent reference repeat, used as the inference-noise
+  floor. Compiled-input/output agreement is also recorded in Markdown/JSON.
+
+Every caption identifies the model, dataset, task, split, query count, candidate
+protocol and preliminary status. Error bars are **bootstrap standard errors over
+queries**, not standard deviations over training seeds; JSON/CSV also contain
+95% confidence intervals. See [evaluation definitions](ZERO_SHOT_EVALUATION.md).
+
+## Common issues
+
+* **pybind11 `cast.h:45` compilation error:** the reported log uses GCC 12.2 and
+  CUDA 12.1 to build the native `rspmm` extension. For the Triton inference path,
+  sync the updated `motif/rspmm/__init__.py`; it must define a lazy wrapper rather
+  than eagerly importing `.rspmm` at module scope. Retry with a fresh run tag.
+  If the native backend is intentionally used, a GCC 11.x module (not necessarily
+  11.3), refreshed `CC`/`CXX` and a separate build cache are a known workaround
+  for this compiler issue. Preserve the failing compiler command if it continues.
+* **The same build error after the lazy-import edit:** inspect the exact HPC file
+  named in the traceback, using `sed -n '1,20p' motif/rspmm/__init__.py` from the
+  repository root. A traceback executing `from .rspmm import generalized_rspmm`
+  at line 1 shows the old initializer was used for that run. Editing the Windows
+  checkout does not update the HPC copy automatically. Sync the file, start a new
+  Python process and save a fresh log with a fresh run tag; old logs do not change.
+* **No CUDA GPU visible:** run inference inside the GPU allocation with the CUDA
+  Torch wheel and activated venv.
+* **Output already exists:** select a fresh `--run-tag`, e.g. `smoke64_r2`, and use
+  the same tag for reporting. Inference does not silently resume partial suites.
+* **Out of memory:** use `--batch-size 1` for the whole suite with a fresh tag,
+  e.g. `--run-tag smoke64_bs1`. Keep that batch size fixed across views/repeats.
+* **Missing export:** preparation must finish before inference. `--data` can
+  select a nondefault adapter-ready export directory.
+* **Partial or incompatible reports:** inspect missing runs and keep checkpoint,
+  code, GPU type, batch size, seed and query settings fixed across the suite.
+  After changing them, start a new tag rather than combining old and new runs.

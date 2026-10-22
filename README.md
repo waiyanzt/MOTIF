@@ -34,6 +34,8 @@ under `rai-datasets/preprocessed/_build/`.
 
 For frozen evaluation, all-pairs invariance and LaTeX tables, see
 [zero-shot evaluation](docs/ZERO_SHOT_EVALUATION.md).
+For copyable HPC commands from setup through results, use the
+[step-by-step runbook](docs/HPC_ZERO_SHOT_RUNBOOK.md).
 
 ## Synthetic experiments ##
 

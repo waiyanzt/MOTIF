@@ -1,5 +1,8 @@
 # MOTIF zero-shot performance and representation sensitivity
 
+For the step-by-step command sequence, see the
+[HPC zero-shot runbook](HPC_ZERO_SHOT_RUNBOOK.md).
+
 The upstream `script/run.py:test` supports zero-shot evaluation and reports MR,
 MRR and Hits@k, normally with full-entity head/tail ranking and pessimistic ties.
 It does not supply the requested classification metrics, all-pairs invariance,
@@ -10,7 +13,11 @@ MOTIF's released `build_relation_hypergraph`, then calls the native model forwar
 pass. Checkpoint loading is strict, gradients and dropout are disabled, FP32 is
 used with TF32 disabled, and checkpoint state must remain unchanged. Every graph
 view and reference repeat runs in its own process. Lift is built once per graph;
-the relation encoder remains query-conditioned. No upstream source is edited.
+the relation encoder remains query-conditioned. The package initializer
+`motif/rspmm/__init__.py` defers importing the native extension until
+`generalized_rspmm` is called, so importing Triton kernels does not trigger an
+unused native build. The model computation and kernel implementations are
+unchanged.
 
 After Lift, its node-count scalar is converted to a Python integer so the relation
 encoder's local padding-count increment cannot mutate the graph's stored count.
@@ -72,10 +79,13 @@ Torch/PyG extension wheels already installed:
 python -m pip install -r requirements-eval.txt
 ```
 
-The native extension compilation issue still needs resolution before running the
-model. First reproduce an upstream benchmark with `script/run.py --epochs 0`.
-The new adapter also needs GPU validation against the upstream scoring path;
-CPU tests do not substitute for this numerical reproduction.
+Sync the lazy native-extension initializer to the HPC before retrying the
+reported pybind11 build failure. The Triton inference path should no longer
+build the separate native extension; this change has not been runtime-tested on
+the HPC. Before treating results as a validated reproduction, reproduce an
+upstream benchmark with `script/run.py --epochs 0`. The new adapter also needs
+GPU validation against the upstream scoring path; CPU tests do not substitute
+for this numerical reproduction.
 
 First reference-only smoke, including a separate repeat:
 
