@@ -183,24 +183,123 @@ preliminary until that validation is complete.
 
 ## 7. Optional additional tasks
 
-These require the corresponding preprocessing to be complete. Use distinct tags
-so existing Movie-Year output directories do not conflict:
+Use distinct tags so existing Movie-Year output directories do not conflict.
+Restore the module/venv exports in step 1 in each new GPU job. The same frozen
+checkpoint, inference adapter and reporting code handle these tasks.
+
+### IMDb Movie-Director
+
+The Movie-Year commands above do not evaluate Movie-Director. The default IMDb
+preprocessor prepares both tasks, but `--tasks movie_year` prepares only Year.
+Inspect `rai-datasets/preprocessed/IMDB/manifest.json` or list that directory to
+see which tasks were exported on the HPC.
+
+The canonical Movie-Director family has **v1 and v3**, with Actor context on the
+Movie or Link respectively. Director is the supervised target and stays on the
+Movie; Year is fixed Movie context. There are 836 test queries, with the true
+director plus 19 fixed negatives for LP. Supplementary classification ranks all
+2,081 directors. All views and the reference repeat total five inference
+processes, and reporting compares physical v1 vs v3.
+
+If `movie_director/manifest.json` exists in the default IMDb export:
 
 ```bash
-# Movie-Director: physical v1/v3, compiled views, and v1 repeat.
+python script/eval_lp.py --dataset imdb --task movie_director --limit 64 --run-tag director_smoke64
+python script/report_lp.py --dataset imdb --run-tag director_smoke64
+
+# After the smoke run succeeds, run all 836 test queries.
 python script/eval_lp.py --dataset imdb --task movie_director --run-tag director_full
 python script/report_lp.py --dataset imdb --run-tag director_full
+```
 
-# Both IMDb tasks, if both were prepared.
-python script/eval_lp.py --dataset imdb --run-tag both_full
-python script/report_lp.py --dataset imdb --run-tag both_full
+If the existing IMDb export contains only Movie-Year, prepare Director in fresh
+directories, then point evaluation at that export:
 
-# DBLP Paper-Conference smoke, then full.
-python script/eval_lp.py --dataset dblp --limit 64 --run-tag smoke64
+```bash
+python script/prepare_imdb_lp.py --tasks movie_director \
+  --work-dir rai-datasets/preprocessed/_build/IMDB_director \
+  --output rai-datasets/preprocessed/IMDB_director
+
+python script/eval_lp.py --dataset imdb --task movie_director \
+  --data rai-datasets/preprocessed/IMDB_director \
+  --limit 64 --run-tag director_smoke64
+python script/report_lp.py --dataset imdb --run-tag director_smoke64
+
+# After the smoke run succeeds; keep the same --data path.
+python script/eval_lp.py --dataset imdb --task movie_director \
+  --data rai-datasets/preprocessed/IMDB_director --run-tag director_full
+python script/report_lp.py --dataset imdb --run-tag director_full
+```
+
+If both tasks were prepared in the default IMDb export, a single evaluation
+command without `--task` runs both, e.g. `--dataset imdb --run-tag both_full`.
+This repeats the Year experiment, so separate Director commands are sufficient
+when Year has already been run.
+
+### DBLP Paper-Conference
+
+The query is `(paper, paper_to_conference, ?)` over all **20 conferences**.
+The physical variants differ in where the training-support Area context sits:
+
+| Variant | Area placement |
+| --- | --- |
+| v1 | Paper-to-Area |
+| v2 | Conference-to-Area |
+| v3 | Author-to-Area |
+
+Universal is omitted. Each variant also has a compiled view. The suite runs
+three physical variants, three compiled views and a physical v1 repeat: seven
+sequential inference processes. Shared queries/candidates support the three
+comparisons v1-v2, v1-v3 and v2-v3, with Agreement@1 and Kendall tau-b.
+
+Place these raw files yourself:
+
+```text
+rai-datasets/raw/DBLP/
+  author_label.txt
+  paper_author.txt
+  paper_conf.txt
+  paper_term.txt
+```
+
+Prepare once on CPU (skip if the adapter-ready DBLP export already exists):
+
+```bash
+python script/prepare_dblp_lp.py
+```
+
+Expected post-filter train/validation/test positives: **9,448 / 1,348 / 2,666**,
+with 26,076 nodes. The command verifies canonical raw files/splits, uses
+training-only mapping support and target edges, and exports to
+`rai-datasets/preprocessed/DBLP/`.
+
+Inside the GPU allocation, run the smoke suite:
+
+```bash
+mkdir -p logs
+set -o pipefail
+
+python -u script/eval_lp.py --dataset dblp --task paper_conference \
+  --limit 64 --run-tag smoke64 2>&1 | tee logs/dblp_paper_conference_smoke64.log
+
+# After successful inference:
 python script/report_lp.py --dataset dblp --run-tag smoke64
-python script/eval_lp.py --dataset dblp --run-tag full
+```
+
+Then run the full 2,666-query suite and generate reports after it succeeds:
+
+```bash
+python -u script/eval_lp.py --dataset dblp --task paper_conference \
+  --run-tag full 2>&1 | tee logs/dblp_paper_conference_full.log
 python script/report_lp.py --dataset dblp --run-tag full
 ```
+
+Reports go to `results/motif_zeroshot_dblp_lp_<tag>/tables/`, including LP and
+classification performance, the three variant pairs, repeat/compiled controls,
+query-bootstrap uncertainty and LaTeX. DBLP LP and classification both use the
+same 20-conference universe; IMDb's full-type classification is a supplementary
+larger pool. Generate reports on the HPC while the ignored score arrays are
+available, before sharing text summaries through Git.
 
 ## 8. Preserve and share the results
 

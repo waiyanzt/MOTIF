@@ -63,11 +63,69 @@ contains its compiled view. Add `--include-universal` to either command to
 include that arm. Movie-Year's compiled view equals its universal graph even
 when the universal arm is omitted.
 
+## Task-specific variant families
+
+Use the actual canonical builders and `SCR/INV-GNN-12D9/docs/DATASET_STATISTICS.md`
+alongside the general `SCR/ULTRA_pilot/ULTRA_pilot/GFM_EVALUATION_GUIDE.md`
+(sections B1-B4). The guide's combined IMDb overview does not mean every IMDb
+task has four physical variants:
+
+| Task | Physical variants | Context that moves | Test queries / candidate protocol |
+| --- | --- | --- | --- |
+| IMDb Movie-Year | v1, v2, v3, v4 | Director and Actor between Movie and Link | 834; true year + 19 fixed frequency-matched negatives |
+| IMDb Movie-Director | v1, v3 | Actor on Movie (v1) or Link (v3) | 836; true director + 19 fixed uniform negatives |
+| DBLP Paper-Conference | v1, v2, v3 | Area on Paper (v1), Conference (v2) or Author (v3) | 2,666; all 20 conferences |
+
+Movie-Director keeps the supervised relation as Movie-to-Director, with only
+training positives in the message graph. Link-to-Director copies are omitted
+from the physical inputs. The year remains fixed Movie context. Do not invent
+Movie-Director v2/v4 by moving its target: that would change the task contract.
+Its two physical variants have one pairwise comparison, v1 vs v3.
+
+DBLP keeps Author-Paper and Paper-Term context in every variant. Paper-Conference
+target edges and the support used to construct relocated Area edges are
+training-only; held-out target edges and held-out paper-specific Area context
+are excluded. The canonical split verifier runs during preprocessing. Every
+variant is exported with its physical and compiled view. Universal remains
+optional and is omitted for this preliminary experiment.
+
+## Preparing one task or adding Movie-Director later
+
 To prepare only the four-variant IMDb task:
 
 ```bash
 python script/prepare_imdb_lp.py --tasks movie_year
 ```
+
+The default command, without `--tasks`, prepares both IMDb LP tasks. Selecting
+`--task movie_year` at evaluation time only runs that task even if both were
+prepared. To see which tasks the HPC export contains, inspect its root
+`manifest.json` or list `rai-datasets/preprocessed/IMDB/`.
+
+If Movie-Director was not prepared and the Movie-Year export already exists,
+build a separate director-only export in fresh directories:
+
+```bash
+python script/prepare_imdb_lp.py --tasks movie_director \
+  --work-dir rai-datasets/preprocessed/_build/IMDB_director \
+  --output rai-datasets/preprocessed/IMDB_director
+```
+
+Pass `--data rai-datasets/preprocessed/IMDB_director` to `eval_lp.py` for this
+export. Do not merge files manually into the existing IMDb export: its root and
+task manifests record the file hashes. If canonical Movie-Director bundles
+already exist, `--bundle-root /path/to/IMDB --tasks movie_director` with a fresh
+`--output` can export them without rebuilding.
+
+For DBLP, place the four raw files in `rai-datasets/raw/DBLP/`, then run:
+
+```bash
+python script/prepare_dblp_lp.py
+```
+
+This creates canonical intermediate bundles under
+`rai-datasets/preprocessed/_build/DBLP/` and adapter-ready inputs under
+`rai-datasets/preprocessed/DBLP/paper_conference/`.
 
 Options `--csv` (IMDb) and `--raw-dir` (DBLP) select raw files elsewhere without
 copying them. `--work-dir` selects a fresh build directory and `--output` selects
@@ -146,9 +204,10 @@ This prepares datasets only. The separate `script/eval_lp.py` adapter reads thes
 arrays, calls MOTIF's native Lift and model, and scores the fixed candidates.
 See [zero-shot evaluation](ZERO_SHOT_EVALUATION.md) for commands and report formats.
 The upstream `script/run.py --dataset IMDB` or `--dataset DBLP` entry points are
-not added. The separate extension preflight is optional; native MOTIF inference
-still imports its bundled CUDA extension, so its compiler issue needs resolution
-before running the model.
+not added. The separate extension preflight is optional. The lazy initializer
+in `motif/rspmm/__init__.py` lets the Triton inference path import its kernels
+without compiling the separate native C++/CUDA extension. That native backend
+still needs a compatible compiler if explicitly used.
 
 Contract checks:
 

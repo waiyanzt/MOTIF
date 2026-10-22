@@ -164,5 +164,6 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 CPU tests check scikit-learn metric parity, tie handling, paired alignment,
 bootstrap reproducibility, six-pair LaTeX/report generation, corrupt-input
 rejection, and real native Lift construction. Synthetic fixtures are not
-experimental results. GPU forward execution, kernel reproducibility and upstream
-numerical parity remain to be checked on the HPC.
+experimental results. A physical Movie-Year v1 GPU smoke completion was reported
+above. Remaining multi-view GPU coverage, kernel reproducibility and upstream
+numerical parity still need validation on the HPC.
