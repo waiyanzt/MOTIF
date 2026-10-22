@@ -339,6 +339,25 @@ original score files on the HPC. Ignore rules do not untrack files already in
 Git; an already-tracked array requires `git rm --cached -- path/to/scores.npz`
 to remove it from the Git index while retaining the local file.
 
+## 9. Combine datasets in one Overleaf project
+
+After pulling the generated reports locally, package the existing text tables:
+
+```bash
+python script/export_overleaf.py \
+  --run results/motif_zeroshot_imdb_lp_full \
+  --run results/motif_zeroshot_dblp_lp_full \
+  --output results/overleaf/motif_zeroshot_tables
+```
+
+Upload `results/overleaf/motif_zeroshot_tables.zip` as a new Overleaf project and
+compile `main.tex` there. The project groups tables under dataset/task folders
+and presents physical-variant classification and pairwise comparisons. Add
+`--include-lp` for MRR/Hits tables. Choose a fresh output name for later exports.
+This command uses the existing LaTeX and JSON reports; it does not require score
+arrays, a GPU or local LaTeX compilation. See [Overleaf results](OVERLEAF_RESULTS.md)
+for the project layout and how to add Movie-Director later.
+
 ## Table definitions
 
 * `link_prediction.tex`: true tail plus 19 supplied negatives, tail-only MRR and

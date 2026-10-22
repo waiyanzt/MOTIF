@@ -1,0 +1,21 @@
+% Requires booktabs and adjustbox.
+\begin{table}[htbp]
+\centering
+\small
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{lrr}
+\toprule
+Comparison & Agreement@1 & Kendall $\tau_b$ \\
+\midrule
+v1 vs v2 & $0.2410 \pm 0.0146$ & $0.6166 \pm 0.0085$ \\
+v1 vs v3 & $0.3465 \pm 0.0160$ & $0.6748 \pm 0.0075$ \\
+v1 vs v4 & $0.7806 \pm 0.0147$ & $0.9101 \pm 0.0038$ \\
+v2 vs v3 & $0.6379 \pm 0.0174$ & $0.9114 \pm 0.0043$ \\
+v2 vs v4 & $0.2950 \pm 0.0153$ & $0.6672 \pm 0.0082$ \\
+v3 vs v4 & $0.2518 \pm 0.0151$ & $0.6433 \pm 0.0083$ \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\caption{MOTIF / IMDb / Movie-Year (20-candidate representation sensitivity). Preliminary frozen zero-shot evaluation of physical variants on the test split; 834 queries. Both columns use the same original 20 candidates per query. Agreement@1 compares predicted entity IDs; Kendall tau-b compares candidate rankings within each query and is then averaged over queries. Values are estimates plus/minus bootstrap standard error from 1000 query resamples.}
+\label{tab:motif-imdb-movie-year-invariance}
+\end{table}

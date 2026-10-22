@@ -19,6 +19,12 @@ the relation encoder remains query-conditioned. The package initializer
 unused native build. The model computation and kernel implementations are
 unchanged.
 
+Here `compiled` means the existing semantic-program graph from SCR's canonical
+bundles. All variants within a task export the same compiled graph, which is
+then fed to MOTIF. Matching outputs on that shared graph do not demonstrate a
+new invariance algorithm inside MOTIF. Compilation is separate from Lift, which
+constructs MOTIF's relation hypergraph from whichever input graph is selected.
+
 After Lift, its node-count scalar is converted to a Python integer so the relation
 encoder's local padding-count increment cannot mutate the graph's stored count.
 
@@ -137,6 +143,11 @@ report.md
 Tables identify model, dataset, task and variant/pair. Include them in LaTeX with
 `\usepackage{booktabs}` and e.g.
 `\input{results/motif_zeroshot_imdb_lp_full/tables/invariance.tex}`.
+
+For a combined IMDb/DBLP presentation with physical-variant rows and separate
+dataset/task folders, use [the Overleaf exporter](OVERLEAF_RESULTS.md). It copies
+the existing table values into a complete project and uploadable ZIP; no
+inference, metric recomputation or local PDF compilation is needed.
 
 Every table caption explicitly identifies this as a preliminary frozen zero-shot
 evaluation, the split, query count, candidate protocol and bootstrap error-bar

@@ -69,7 +69,8 @@ def write_csv(path, rows):
 
 def build_report(root, bootstrap=1000, seed=0):
     summaries, performance_csv, invariance_csv = {}, [], []
-    md = ["# Preliminary MOTIF zero-shot evaluation", "",
+    observed_stages = set()
+    md = ["# Preliminary MOTIF evaluation", "",
           f"Uncertainty: estimate ± bootstrap SE; {bootstrap} query resamples, seed {seed}. Percentile 95% CIs are in JSON/CSV.",
           "LP uses each query's original positive + 19 fixed negatives, average ranks for ties.",
           "Classification predicts the actual target entity over the full target-type pool; macro averages include every pool class, zero_division=0.",
@@ -101,11 +102,17 @@ def build_report(root, bootstrap=1000, seed=0):
         if not runs:
             continue
         dataset, task = contract["dataset"], contract["task"]
+        stage = contract.get("evaluation_stage", "zeroshot")
+        observed_stages.add(stage)
         title = f"MOTIF / {'IMDb' if dataset == 'imdb' else 'DBLP'} / {TASK_LABELS[task]}"
         first_meta = next(iter(runs.values()))[0]
         n_queries = len(reference_arrays["positives"])
         n_classes = first_meta["full_type_candidates"]
-        context = f"Preliminary frozen zero-shot evaluation on the {contract.get('split', 'test')} split; {n_queries} queries."
+        setting = "frozen zero-shot" if stage == "zeroshot" else "fine-tuned checkpoint"
+        context = f"Preliminary {setting} evaluation on the {contract.get('split', 'test')} split; {n_queries} queries."
+        if stage == "finetuned":
+            trained = contract["fine_tuning"]["training_contract"]
+            context += f" Checkpoint fine-tuned on {trained['train_view']}/{trained['train_variant']}, selected by validation MRR."
         if contract.get("limit", 0):
             context += " Limited-query smoke run."
         target = {"movie_year": "calendar year", "movie_director": "director", "paper_conference": "conference"}[task]
@@ -162,8 +169,9 @@ def build_report(root, bootstrap=1000, seed=0):
         compiled_inputs = (len({run[0]["graph_sha256"] for _, run in compiled}) == 1) if compiled else None
         compiled_outputs = all(np.array_equal(compiled[0][1][1]["full_type_scores"], run[1]["full_type_scores"]) for _, run in compiled) if compiled else None
         family = TASK_VARIANTS[task] if dataset == "imdb" else DBLP_TASK_VARIANTS[task]
-        missing = [f"{view}/{v}" for view in ("physical", "compiled") for v in family if (view, v, False) not in runs]
-        if repeat is None:
+        expected_views = ("physical",) if stage == "finetuned" else ("physical", "compiled")
+        missing = [f"{view}/{v}" for view in expected_views for v in family if (view, v, False) not in runs]
+        if repeat is None and stage == "zeroshot":
             missing.append("physical/v1__repeat")
         md.extend([f"Reference repeat bitwise identical: {repeat['bitwise_identical'] if repeat else 'not run'}.",
                    f"Compiled inputs identical: {compiled_inputs}; compiled full-type scores bitwise identical: {compiled_outputs}.",
@@ -173,9 +181,12 @@ def build_report(root, bootstrap=1000, seed=0):
                            "compiled_full_type_outputs_identical": compiled_outputs, "missing_runs": missing}
     if not summaries:
         raise ValueError("No inference outputs found")
+    if len(observed_stages) != 1:
+        raise ValueError("Do not combine zero-shot and fine-tuned runs in one result directory")
     output = root / "tables"
     output.mkdir(exist_ok=True)
-    write_json(output / "summary.json", {"evaluation_stage": "preliminary", "uncertainty": "bootstrap_standard_error", "bootstrap": bootstrap,
+    write_json(output / "summary.json", {"evaluation_stage": next(iter(observed_stages)), "report_status": "preliminary",
+                                         "uncertainty": "bootstrap_standard_error", "bootstrap": bootstrap,
                                          "bootstrap_seed": seed, "tasks": summaries})
     (output / "report.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     for name, lines in latex.items():
@@ -189,6 +200,7 @@ def build_report(root, bootstrap=1000, seed=0):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", choices=("imdb", "dblp"), required=True)
+    parser.add_argument("--stage", choices=("zeroshot", "finetuned"), default="zeroshot")
     parser.add_argument("--results", type=Path, default=ROOT / "results")
     parser.add_argument("--run-tag", default="full")
     parser.add_argument("--bootstrap", type=int, default=1000)
@@ -196,7 +208,7 @@ def main():
     args = parser.parse_args()
     if args.bootstrap < 0 or args.bootstrap == 1:
         parser.error("Bootstrap must be zero or at least two")
-    build_report(result_root(args.results, args.dataset, args.run_tag), args.bootstrap, args.bootstrap_seed)
+    build_report(result_root(args.results, args.dataset, args.run_tag, args.stage), args.bootstrap, args.bootstrap_seed)
 
 
 if __name__ == "__main__":

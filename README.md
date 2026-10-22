@@ -36,6 +36,10 @@ For frozen evaluation, all-pairs invariance and LaTeX tables, see
 [zero-shot evaluation](docs/ZERO_SHOT_EVALUATION.md).
 For copyable HPC commands from setup through results, use the
 [step-by-step runbook](docs/HPC_ZERO_SHOT_RUNBOOK.md).
+To combine IMDb and DBLP tables into one uploadable Overleaf project, use the
+[Overleaf export instructions](docs/OVERLEAF_RESULTS.md).
+For checkpoint-based IMDb training and separately labelled fine-tuned results,
+see the [IMDb fine-tuning runbook](docs/IMDB_FINE_TUNING.md).
 
 ## Synthetic experiments ##
 

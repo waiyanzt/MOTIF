@@ -1,4 +1,4 @@
-"""Frozen MOTIF on the portable IMDb/DBLP exports; one process per graph view."""
+"""Frozen scoring of released or fine-tuned MOTIF checkpoints on portable LP exports."""
 from __future__ import annotations
 
 import argparse
@@ -19,10 +19,12 @@ from lp_data import ROOT, PREPROCESSED_ROOT, array_hash, file_hash, full_target_
 from lp_metrics import average_ranks, point_metrics
 
 
-def result_root(output, dataset, tag):
+def result_root(output, dataset, tag, stage="zeroshot"):
     if not re.fullmatch(r"[A-Za-z0-9_-]+", tag):
         raise ValueError("Run tag must contain only letters, digits, underscores and hyphens")
-    return output / f"motif_zeroshot_{dataset}_lp_{tag}"
+    if stage not in ("zeroshot", "finetuned"):
+        raise ValueError("Unknown evaluation stage")
+    return output / f"motif_{stage}_{dataset}_lp_{tag}"
 
 
 def query_subset(positives, limit, seed, task):
@@ -108,17 +110,31 @@ def worker(args):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
     torch.set_num_threads(1)
-    output = result_root(args.output, args.dataset, args.run_tag) / args.task / args.view / (args.variant + ("__repeat" if args.repeat else ""))
+    output = result_root(args.output, args.dataset, args.run_tag, args.stage) / args.task / args.view / (args.variant + ("__repeat" if args.repeat else ""))
     if output.exists():
         raise FileExistsError(f"Run exists: {output}; choose a new --run-tag")
     meta, edges, positives, candidates, pool, index = load_inputs(args)
     cfg = util.load_config(str(args.config), context={"dataset": "custom", "epochs": 0,
                            "bpe": None, "gpus": [device.index or 0], "ckpt": str(args.checkpoint)})
     model = MOTIF(cfg.model.relation_model, cfg.model.entity_model)
-    model.load_state_dict(torch.load(args.checkpoint, map_location="cpu")["model"], strict=True)
+    checkpoint = torch.load(args.checkpoint, map_location="cpu")
+    fine_tuning = checkpoint.get("fine_tuning")
+    if (args.stage == "finetuned") != (fine_tuning is not None):
+        raise ValueError("Checkpoint/stage mismatch: released weights use zeroshot; adapted weights use finetuned")
+    if fine_tuning is not None:
+        trained = fine_tuning["training_contract"]
+        if trained["dataset"] != args.dataset or trained["task"] != args.task:
+            raise ValueError("Fine-tuned checkpoint dataset/task differs from evaluation")
+        if trained["config_sha256"] != file_hash(args.config):
+            raise ValueError("Fine-tuning and evaluation model configurations differ")
+        if trained["export_manifest_sha256"] != file_hash(args.data / "manifest.json"):
+            raise ValueError("Fine-tuning and evaluation dataset exports differ")
+    model.load_state_dict(checkpoint["model"], strict=True)
     model.requires_grad_(False)
     model.eval().to(device)
     parameters_before = state_hash(model)
+    if fine_tuning is not None and parameters_before != fine_tuning["parameters_sha256"]:
+        raise ValueError("Fine-tuned checkpoint weights differ from their recorded hash")
     torch.cuda.reset_peak_memory_stats(device)
     torch.cuda.synchronize(device)
     started = time.perf_counter()
@@ -145,6 +161,7 @@ def worker(args):
     if parameters_after != parameters_before:
         raise RuntimeError("Checkpoint state changed during frozen inference")
     contract = {"model": "MOTIF", "dataset": args.dataset, "task": args.task,
+                "evaluation_stage": args.stage,
                 "checkpoint_sha256": file_hash(args.checkpoint), "config_sha256": file_hash(args.config),
                 "export_manifest_sha256": file_hash(args.data / "manifest.json"),
                 "query_sha256": array_hash(positives, candidates, index, pool),
@@ -156,6 +173,8 @@ def worker(args):
                 "gpu": torch.cuda.get_device_name(device),
                 "model_source": {p.relative_to(ROOT).as_posix(): file_hash(p) for p in sorted((ROOT / "motif").rglob("*.py"))},
                 "adapter_source": {p.name: file_hash(p) for p in (Path(__file__), ROOT / "script/lp_metrics.py", ROOT / "script/lp_data.py")}}
+    if fine_tuning is not None:
+        contract["fine_tuning"] = fine_tuning
     metrics = {"model": "MOTIF", "dataset": args.dataset, "task": args.task,
                "variant": args.variant, "view": args.view, "repeat": args.repeat,
                "comparison_contract": contract, "num_queries": len(positives),
@@ -183,6 +202,7 @@ def worker(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", choices=("imdb", "dblp"), required=True)
+    parser.add_argument("--stage", choices=("zeroshot", "finetuned"), default="zeroshot")
     parser.add_argument("--data", type=Path)
     parser.add_argument("--output", type=Path, default=ROOT / "results")
     parser.add_argument("--checkpoint", type=Path, default=ROOT / "ckpts/motif_3g.pth")
@@ -205,7 +225,7 @@ def main():
     args.data = (args.data or PREPROCESSED_ROOT / args.dataset.upper()).resolve()
     args.output, args.checkpoint, args.config = (p.resolve() for p in (args.output, args.checkpoint, args.config))
     args.run_tag = args.run_tag or (f"smoke{args.limit}" if args.limit else "full")
-    result_root(args.output, args.dataset, args.run_tag)
+    result_root(args.output, args.dataset, args.run_tag, args.stage)
     if args.single:
         if not all((args.task, args.view, args.variant)):
             parser.error("A single run needs task, view and variant")
@@ -231,6 +251,8 @@ def main():
                        "--run-tag", args.run_tag, "--task", task, "--view", view, "--variant", variant]
             if repeat:
                 command.append("--repeat")
+            if args.stage != "zeroshot":
+                command.extend(["--stage", args.stage])
             env = {**os.environ, "PYTHONHASHSEED": "0", "CUBLAS_WORKSPACE_CONFIG": ":4096:8"}
             subprocess.run(command, cwd=ROOT, env=env, check=True)
 
