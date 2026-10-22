@@ -168,16 +168,21 @@ kg-datasets/
 # Local RAI raw datasets and generated preprocessing artifacts.
 /rai-datasets/
 
+# Generated NumPy datasets and per-query score arrays.
+*.npz
+*.npy
+
 *.log
 *.csv
 *.out
 *.tmp
 ULTRA_pilot
 
-# Retain reports and LaTeX tables; exclude raw score arrays and other artifacts.
+# Retain text reports, LaTeX tables and result logs; exclude binary artifacts.
 /results/**
 !/results/**/
 !/results/**/*.json
 !/results/**/*.md
 !/results/**/*.tex
 !/results/**/*.csv
+!/results/**/*.log

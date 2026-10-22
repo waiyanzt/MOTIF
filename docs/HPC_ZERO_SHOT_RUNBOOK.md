@@ -117,8 +117,13 @@ python -u script/eval_lp.py --dataset imdb --task movie_year --limit 64 --run-ta
 ```
 
 The first model forward can take longer while Triton kernels compile.
-Inference has not yet been validated on this HPC setup; a
-successful run is the first runtime validation, not a claim of upstream parity.
+A user-reported single-view GPU smoke run completed for physical v1 on 64
+Movie-Year queries, saving `motif_zeroshot_imdb_lp_debug64/movie_year/physical/v1`
+with MRR 0.1681 and full-type accuracy 0.0312. This confirms that the Triton
+forward path ran in that HPC session. The saved artifacts have not yet been
+reviewed, and the other variants, compiled views, reference repeat and upstream
+numerical reproduction remain pending. Fine-tuning backward kernels were not
+exercised by this inference run.
 
 If it fails, keep the log and send the error. Stop before starting the full run.
 
@@ -157,7 +162,7 @@ outputs are explicitly labeled as limited-query preliminary results.
 
 ## 6. Run the full Movie-Year test set
 
-Once the smoke outputs look sensible:
+After a successful smoke run, evaluate every view and repeat on the full test set:
 
 ```bash
 python -u script/eval_lp.py --dataset imdb --task movie_year --run-tag full 2>&1 | tee logs/imdb_movie_year_full.log
@@ -165,7 +170,12 @@ python script/report_lp.py --dataset imdb --run-tag full
 ```
 
 This uses all 834 held-out Movie-Year test queries. Outputs go to
-`results/motif_zeroshot_imdb_lp_full/`.
+`results/motif_zeroshot_imdb_lp_full/`. The suite runs four physical variants,
+four compiled views and one physical v1 repeat, as nine sequential inference
+processes. Reporting calculates all six physical variant pairs, including
+Agreement@1 and Kendall tau-b, plus performance metrics and the repeat control.
+Run reporting after inference finishes successfully. Use a fresh run tag for
+both commands if this output directory already contains runs.
 
 For scientific reporting, also reproduce the checkpoint's upstream benchmark and
 validate numerical agreement with its scoring path. The experiments remain
@@ -202,8 +212,33 @@ tar -czf results/imdb_movie_year_smoke64_results.tar.gz results/motif_zeroshot_i
 ```
 
 The full results directory is preferable to only the LaTeX table when reviewing
-numerical behavior. Preprocessing and score arrays remain git-ignored; summary
-tables and JSON reports are eligible for version control.
+numerical behavior. NumPy `.npz` and `.npy` arrays are ignored throughout the
+repository, and all `rai-datasets/` contents remain ignored. Under `results/`,
+JSON, Markdown, LaTeX, CSV and `.log` files are eligible for version control;
+binary arrays and archives remain ignored.
+
+To share small reports through Git, first sync the updated `.gitignore` to the
+HPC. After full inference finishes, generate reports there while `scores.npz`
+is available, optionally copy the terminal log into the result directory, then
+stage and inspect the files:
+
+```bash
+python script/report_lp.py --dataset imdb --run-tag full
+cp logs/imdb_movie_year_full.log results/motif_zeroshot_imdb_lp_full/run.log
+
+git add -- .gitignore results/
+git diff --cached --stat
+git commit -m "Add preliminary MOTIF IMDb Movie-Year zero-shot results"
+git push
+```
+
+After pulling locally, the report CSV/JSON files can be analyzed and the LaTeX
+tables edited directly. Re-running `report_lp.py`, changing bootstrap settings,
+or investigating per-query scores locally also requires the ignored
+`scores.npz` files. Transfer the full archive separately when needed; keep the
+original score files on the HPC. Ignore rules do not untrack files already in
+Git; an already-tracked array requires `git rm --cached -- path/to/scores.npz`
+to remove it from the Git index while retaining the local file.
 
 ## Table definitions
 

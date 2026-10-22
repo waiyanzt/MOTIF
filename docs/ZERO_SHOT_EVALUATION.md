@@ -80,12 +80,15 @@ python -m pip install -r requirements-eval.txt
 ```
 
 Sync the lazy native-extension initializer to the HPC before retrying the
-reported pybind11 build failure. The Triton inference path should no longer
-build the separate native extension; this change has not been runtime-tested on
-the HPC. Before treating results as a validated reproduction, reproduce an
-upstream benchmark with `script/run.py --epochs 0`. The new adapter also needs
-GPU validation against the upstream scoring path; CPU tests do not substitute
-for this numerical reproduction.
+reported pybind11 build failure. The Triton inference path no longer imports
+the separate native extension at package initialization. A user-reported GPU
+smoke run completed for physical Movie-Year v1 with 64 queries (MRR 0.1681,
+full-type accuracy 0.0312); saved artifacts and the remaining suite have not yet
+been reviewed. Before treating results as a validated reproduction, reproduce
+an upstream benchmark with `script/run.py --epochs 0`. The new adapter also
+needs GPU validation against the upstream scoring path; the smoke completion
+does not establish numerical agreement with that path or validate fine-tuning
+backward kernels.
 
 First reference-only smoke, including a separate repeat:
 
@@ -145,8 +148,12 @@ This is the exploratory evaluation for discussion, with both settings retained.
 Reports reject mismatched checkpoints, query/candidate identities,
 precision, hardware, model/adapter source hashes and inference settings. They
 label partial coverage, save the repeat noise floor, and check compiled graph
-and score equality. JSON, CSV, Markdown and TeX reports are eligible for Git;
-raw score arrays remain ignored.
+and score equality. JSON, CSV, Markdown, TeX and `.log` files under `results/`
+are eligible for Git; NumPy `.npz` and `.npy` arrays remain ignored repository-wide.
+Generate reports on the HPC before committing results. Pulling only the text
+reports supports local summary analysis and table edits; recomputing reports or
+per-query comparisons also requires transferring the ignored `scores.npz` files
+separately. See the runbook's sharing instructions.
 
 Local validation:
 
