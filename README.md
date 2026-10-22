@@ -38,7 +38,7 @@ For copyable HPC commands from setup through results, use the
 [step-by-step runbook](docs/HPC_ZERO_SHOT_RUNBOOK.md).
 To combine IMDb and DBLP tables into one uploadable Overleaf project, use the
 [Overleaf export instructions](docs/OVERLEAF_RESULTS.md).
-For checkpoint-based IMDb training and separately labelled fine-tuned results,
+For four-variant IMDb training, the full train/test transfer matrix and fine-tuned LaTeX tables,
 see the [IMDb fine-tuning runbook](docs/IMDB_FINE_TUNING.md).
 
 ## Synthetic experiments ##

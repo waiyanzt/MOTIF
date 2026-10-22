@@ -80,23 +80,109 @@ def presentation_table(record, dataset, task, kind, bootstrap):
     return grid_table(headers, rows, caption, label)
 
 
+def matrix_tables(summary, include_lp=False):
+    """Render saved train/test statistics; no score loading or metric recomputation."""
+    variants = summary["variants"]
+    task, dataset = summary["task"], summary["dataset"]
+    method = "MOTIF (FT)"
+    first = summary["cells"][variants[0]][variants[0]]
+    context = (f"Preliminary fine-tuned MOTIF on {DATASETS[dataset]} {TASKS[task]}; "
+               f"seed {summary['seed']}, {first['num_queries']:,} {summary['split']} queries. ")
+    trained = summary["shared_training_contract"]
+    context += f"Each variant uses {trained['steps']:,} optimizer steps; validation MRR selects its checkpoint. "
+    if trained["val_limit"] or summary["shared_evaluation_contract"]["limit"]:
+        context += "Limited-query debugging run. "
+    uncertainty = (f"Values are estimates $\\pm$ query-bootstrap standard error "
+                   f"({summary['bootstrap']:,} resamples), not variation across training seeds."
+                   if summary["bootstrap"] else "Values are point estimates.")
+    prefix = f"tab:motif-{dataset}-{task.replace('_', '-')}-matrix"
+    files = {}
+    protocol = (f"Classification uses all {first['classification_classes']:,} target classes; "
+                "precision and recall are macro-averaged. ")
+    for kind, columns in (("classification", CLASS_COLUMNS), ("link_prediction", LP_COLUMNS)):
+        if kind == "link_prediction" and not include_lp:
+            continue
+        notes = protocol if kind == "classification" else "LP ranks the original 20 candidates with average ranks for ties. "
+        diagonal = [[DATASETS[dataset], method, variant] +
+                    [metric_cell(summary["cells"][variant][variant]["metrics"][key]) for key, _ in columns]
+                    for variant in variants]
+        files[kind + "_diagonal"] = grid_table(
+            ["Dataset", "Method", "Variant"] + [name for _, name in columns], diagonal,
+            context + "Each model is fine-tuned and tested on its own variant (C-a). " + notes + uncertainty,
+            prefix + "-" + kind + "-diagonal")
+        all_rows = [[DATASETS[dataset], method, train, test] +
+                    [metric_cell(summary["cells"][train][test]["metrics"][key]) for key, _ in columns]
+                    for train in variants for test in variants]
+        files[kind + "_all"] = grid_table(
+            ["Dataset", "Method", "Train", "Test"] + [name for _, name in columns], all_rows,
+            context + f"All train-to-test combinations; {len(variants)} independently fine-tuned checkpoints. " + notes + uncertainty,
+            prefix + "-" + kind + "-all")
+    matrices = (("accuracy", "Accuracy"), ("macro_f1", "Macro-F1")) + ((("mrr", "MRR"),) if include_lp else ())
+    for key, label in matrices:
+        rows = [[train] + [metric_cell(summary["cells"][train][test]["metrics"][key]) for test in variants]
+                for train in variants]
+        files["transfer_" + key] = grid_table(
+            [r"Train $\backslash$ Test"] + list(variants), rows,
+            context + f"{label} transfer matrix. Rows identify the training graph and columns the test graph. "
+            "The diagonal is matched-variant evaluation (C-a); off-diagonal cells are cross-representation transfer (C-b). "
+            + uncertainty, prefix + "-transfer-" + key.replace("_", "-"))
+    rows = [[method, latex_escape(pair)] + [metric_cell(result["metrics"][key]) for key, _ in PAIR_COLUMNS]
+            for pair, result in sorted(summary["diagonal_pairs"].items())]
+    files["per_variant_comparisons"] = grid_table(
+        ["Method", "Comparison"] + [name for _, name in PAIR_COLUMNS], rows,
+        context + "C-a: compare independently fine-tuned models, each tested on its own variant. "
+        "Differences can reflect both training and representation. Both metrics use the original 20 candidates. "
+        + uncertainty, prefix + "-per-variant-comparisons")
+    transfer = []
+    for train in variants:
+        rows = [[method, train, latex_escape(pair)] +
+                [metric_cell(result["metrics"][key]) for key, _ in PAIR_COLUMNS]
+                for pair, result in sorted(summary["within_checkpoint_pairs"][train].items())]
+        transfer.append(grid_table(
+            ["Method", "Train", "Test comparison"] + [name for _, name in PAIR_COLUMNS], rows,
+            context + f"Test-variant comparisons using the same checkpoint fine-tuned on {train}. "
+            "Agreement@1 compares predictions; Kendall tau-b compares within-query rankings on the original 20 candidates. "
+            + uncertainty, prefix + "-transfer-comparisons-" + train))
+    files["transfer_comparisons"] = "\n".join(transfer)
+    return files
+
+
 def collect_runs(run_roots, include_lp):
     entries, files = {}, {}
     kinds = ("classification", "invariance") + (("link_prediction",) if include_lp else ())
     for run_root in run_roots:
         directory = run_root / "tables"
         summary = json.loads((directory / "summary.json").read_text(encoding="utf-8"))
+        if summary.get("format") == "motif_finetune_matrix_v1":
+            dataset, task = summary["dataset"], summary["task"]
+            key = dataset, task, "finetuned_matrix"
+            if key in entries:
+                raise ValueError(f"Duplicate matrix run for {dataset}/{task}")
+            tables = matrix_tables(summary, include_lp)
+            entries[key] = {"run_root": run_root, "kinds": tuple(tables), "folder": "matrix",
+                            "label": "fine-tuning matrix"}
+            for kind, content in tables.items():
+                files[Path("tables") / dataset / task / "matrix" / f"{kind}.tex"] = content
+            continue
         for task, record in summary["tasks"].items():
             dataset = record["comparison_contract"]["dataset"]
             if dataset not in DATASETS or task not in TASKS:
                 raise ValueError(f"Unsupported dataset/task: {dataset}/{task}")
-            key = dataset, task
+            stage = record["comparison_contract"].get("evaluation_stage", "zeroshot")
+            folder = ("finetuned_" + record["comparison_contract"]["fine_tuning"]["training_contract"]["train_variant"]
+                      if stage == "finetuned" else "")
+            key = dataset, task, folder or "zeroshot"
             if key in entries:
-                raise ValueError(f"Choose one run per dataset/task; duplicate {dataset}/{task}")
-            entries[key] = run_root
+                raise ValueError(f"Choose one run per dataset/task/setting; duplicate {dataset}/{task}/{stage}")
+            entries[key] = {"run_root": run_root, "kinds": kinds, "folder": folder,
+                            "label": folder.replace("_", " ") if folder else "zero-shot"}
             for kind in kinds:
-                path = Path("tables") / dataset / task / f"{kind}.tex"
-                files[path] = presentation_table(record, dataset, task, kind, summary["bootstrap"])
+                path = Path("tables") / dataset / task / folder / f"{kind}.tex"
+                text = presentation_table(record, dataset, task, kind, summary["bootstrap"])
+                if folder:
+                    text = text.replace(f"tab:motif-{dataset}-{task.replace('_', '-')}-",
+                                        f"tab:motif-{dataset}-{task.replace('_', '-')}-{folder.replace('_', '-')}-")
+                files[path] = text
     if not entries:
         raise ValueError("No task tables found")
     return entries, kinds, files
@@ -109,17 +195,21 @@ def main_document(entries, kinds):
              r"\begin{document}", ""]
     first_dataset = True
     for dataset, label in DATASETS.items():
-        tasks = [task for task in TASKS if (dataset, task) in entries]
+        tasks = [task for task in TASKS if any(key[:2] == (dataset, task) for key in entries)]
         if not tasks:
             continue
         if not first_dataset:
             lines.append(r"\clearpage")
         first_dataset = False
         for task in tasks:
-            lines.append(f"\\section*{{{label}: {TASKS[task]}}}")
-            for kind in kinds:
-                lines.append(f"\\input{{tables/{dataset}/{task}/{kind}.tex}}")
-            lines.extend([r"\FloatBarrier", ""])
+            for key, entry in entries.items():
+                if key[:2] != (dataset, task):
+                    continue
+                lines.append(f"\\section*{{{label}: {TASKS[task]} ({entry['label']})}}")
+                for kind in entry["kinds"]:
+                    path = (Path("tables") / dataset / task / entry["folder"] / f"{kind}.tex").as_posix()
+                    lines.extend([f"\\input{{{path}}}", r"\FloatBarrier"])
+                lines.append("")
     return "\n".join(lines + [r"\end{document}", ""])
 
 
@@ -146,8 +236,8 @@ def main():
         "The presentation copies include physical variants and their pairwise comparisons only.\n"
         "They retain the numbers and uncertainty from the saved reports; no metrics were recomputed.\n\n"
         "## Source runs\n\n" + "\n".join(
-            f"- {DATASETS[dataset]} / {TASKS[task].replace('--', '-')}: `{path.as_posix()}`"
-            for (dataset, task), path in entries.items()) + "\n"
+            f"- {DATASETS[dataset]} / {TASKS[task].replace('--', '-')} / {entry['label']}: `{entry['run_root'].as_posix()}`"
+            for (dataset, task, _), entry in entries.items()) + "\n"
     )
     output.mkdir(parents=True)
     for relative, content in files.items():

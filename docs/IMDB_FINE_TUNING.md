@@ -1,50 +1,53 @@
 # IMDb MOTIF fine-tuning on the HPC
 
-Fine-tuning starts from `ckpts/motif_3g.pth` and updates the existing trainable
-weights on IMDb training positives. It does not replay the original pretraining
-datasets. Static positional encodings remain frozen as defined by MOTIF.
-Reuse the existing preprocessed IMDb data and retain the zero-shot results.
+Train four checkpoints independently from `ckpts/motif_3g.pth`, one on each
+physical Movie-Year variant v1-v4. Evaluate each selected checkpoint on all four
+test graphs: **four training runs and 16 evaluations**. Reuse the existing IMDb
+preprocessing and keep the zero-shot results for comparison.
 
-Run from MOTIF with the same modules, activated venv and exports as the successful
-zero-shot run; see the [HPC runbook](HPC_ZERO_SHOT_RUNBOOK.md). No new dependencies
-are required. This new training path has not been executed locally. Its first
-runtime validation is the HPC training smoke below.
+Run from the MOTIF repository root, inside a GPU allocation, with the modules,
+activated venv and exports from the successful runs; see the
+[HPC runbook](HPC_ZERO_SHOT_RUNBOOK.md). No new dependencies are required.
+The matrix runner and reporter have not been executed locally; runtime validation
+is on the HPC.
 
-## Protocol
+## Protocol and what the tables mean
 
-These commands train one checkpoint on **physical v1 Movie-Year**, then evaluate
-the same checkpoint on physical v1-v4. This is guide C-b (cross-representation
-transfer), including a v1-to-v1 reference. The trainer also accepts another
-`--train-variant`. Independently fine-tuning one model per variant is a separate
-experiment, guide C-a; its comparisons involve different trained weights and
-require separate reporting. The current reporter deliberately requires the same
-selected checkpoint across evaluation variants.
-
-Following section C2 of
+This follows section C of
 `SCR/ULTRA_pilot/ULTRA_pilot/GFM_EVALUATION_GUIDE.md`:
 
-* Train on the 2,925 shared Movie-Year positives and their 19 fixed negative years.
-  Context relations are not additional training targets.
-* Fix the optimizer-step budget, batch size, keyed data order and candidate sets
-  when selecting another training variant.
-* Require physical target edges to equal the training positives; reject additional
-  Link-to-target copies. Native MOTIF removes each batch's target edges and internal
-  inverses, then rebuilds Lift before training. Record the actual number removed.
-* Select the checkpoint by MRR on fixed validation candidates using average ranks
-  for ties. Full runs use all 418 validation queries. Test labels are not used for
-  training or checkpoint selection.
-* Update all parameters the released architecture marks trainable. The loss follows
-  MOTIF's binary cross-entropy with detached adversarial negative weights.
+* **C-a, matched variant:** train v1/test v1, train v2/test v2, and so on.
+  These are the four diagonal cells, the per-variant adaptation baseline.
+* **C-b, cross-representation transfer:** train v1/test v2, train v1/test v3,
+  and the other off-diagonal cells. A row holds the trained checkpoint fixed.
+* Each training run starts from the same released weights, with the same seed,
+  optimizer-step budget, batch size, shared targets, fixed negatives and keyed
+  batch order. Training one variant never initializes the next variant's model.
+* Training uses the 2,925 shared Movie-Year positives and their 19 fixed negative
+  years. Native MOTIF removes batch target edges and their inverses, then rebuilds
+  Lift. Context relations are not extra training targets.
+* Validation MRR on all 418 validation queries selects each checkpoint. Test
+  labels are not used for training or checkpoint selection. Step-zero validation
+  is recorded separately; validation ties retain the earlier trained checkpoint.
+* Each evaluation uses all 834 shared test queries. Classification predicts over
+  the full year pool; LP and ranking comparisons use the original 20 candidates.
 
 The pilot defaults are Adam, learning rate `5e-4`, batch size 4, gradient-norm
-clipping at 1 and 1,000 optimizer steps. These are starting settings, not established
-IMDb hyperparameters or a reproduced paper configuration. Universal and compiled
-training arms are outside this initial experiment.
+clipping at 1 and 1,000 optimizer steps **per variant**. All existing trainable
+model parameters are updated; static positional encodings stay frozen as defined
+by MOTIF. The loss is MOTIF's binary cross-entropy with detached adversarial
+negative weights. These are starting settings, not established IMDb
+hyperparameters or a reproduced paper configuration.
 
-## 1. Two-update training smoke
+The experiment uses one training seed, 1024. Values reported as `estimate ± SE`
+use query-bootstrap standard errors, not variation across training seeds. A later
+study should use at least three training seeds and report across-seed mean/SD
+separately, following C4/C6. Universal, compiled and augmented training arms are
+outside this experiment.
 
-Sync the new trainer and updated evaluation/reporting scripts to HPC. Inside
-the GPU allocation:
+## 1. Training smoke, already completed if the v1 smoke succeeded
+
+The existing two-update v1 command checks the backward path and parameter updates:
 
 ```bash
 mkdir -p logs
@@ -56,90 +59,144 @@ python -u script/finetune_imdb_lp.py \
   2>&1 | tee logs/imdb_movie_year_finetune_smoke.log
 ```
 
-This uses the full graph, two optimizer updates and 16 validation queries. It
-exercises backward kernels, checks finite gradients and changed parameters, and
-records gradient norms for both encoders. Limited validation is for this smoke
-only. The successful zero-shot forward did not validate backward kernels.
+If that run succeeded, proceed to the matrix command; it need not be repeated.
+The full run starts from the released checkpoint, not the smoke weights.
+Training retains the lazy native-extension import used by the working Triton path.
 
-Outputs:
+## 2. Train all variants and evaluate the full matrix
+
+Sync the new scripts to the HPC first. Then run:
+
+```bash
+mkdir -p logs
+set -o pipefail
+
+python -u script/run_finetune_matrix.py \
+  --task movie_year --steps 1000 --validate-every 100 \
+  --run-tag matrix \
+  2>&1 | tee logs/imdb_movie_year_finetune_matrix.log
+```
+
+For each training variant, the runner trains from the released checkpoint,
+selects its best validation checkpoint and evaluates it on v1-v4. After all
+16 evaluations finish, it generates the matrix reports and LaTeX tables.
+No preprocessing or zero-shot rerun is needed.
+
+Optional controls:
+
+* `--batch-size 4` sets training batch size; `--eval-batch-size 4` sets test
+  batch size. Keep these fixed across the experiment.
+* `--seed 2048 --run-tag matrix` starts a separate seed's matrix. This does not
+  automatically aggregate multiple training seeds into one table.
+* `--skip-report` finishes training/inference without bootstrapping tables;
+  use the report command below later.
+* `--val-limit` and `--eval-limit` are for debugging. Leave both at their default
+  zero to use all validation and test queries in the full experiment.
+
+To continue with **verified completed runs and evaluation cells** after a stop:
+
+```bash
+python -u script/run_finetune_matrix.py \
+  --task movie_year --steps 1000 --validate-every 100 \
+  --run-tag matrix --resume \
+  2>&1 | tee logs/imdb_movie_year_finetune_matrix_resume.log
+```
+
+Use the same compute settings and source code. `--resume` skips completed work;
+it does not restore optimizer state from an interrupted training run. An
+incomplete training directory is reported as an error, rather than treated as
+a completed checkpoint. A fresh tag starts an entirely new experiment.
+
+## 3. Results and table generation
+
+Training outputs, for each `vN`:
 
 ```text
-results/motif_finetune_imdb_lp_smoke/movie_year/train_v1/seed1024/
+results/motif_finetune_imdb_lp_matrix/movie_year/train_vN/seed1024/
   best.pth
   training_config.json
   training_summary.json
   history.csv
 ```
 
-If it fails, preserve the new log before a full run. The Triton path retains the
-lazy native-extension import; training does not automatically select the separate
-C++/CUDA backend.
-
-## 2. Full pilot training
-
-After the training smoke succeeds, start afresh from the released checkpoint:
-
-```bash
-python -u script/finetune_imdb_lp.py \
-  --task movie_year --train-variant v1 \
-  --steps 1000 --validate-every 100 --run-tag pilot \
-  2>&1 | tee logs/imdb_movie_year_finetune_pilot.log
-```
-
-The best checkpoint among the evaluated training steps is saved to:
+Evaluation outputs, for each training variant `vN` and test variant `vM`:
 
 ```text
-results/motif_finetune_imdb_lp_pilot/movie_year/train_v1/seed1024/best.pth
+results/motif_finetuned_imdb_lp_matrix_train_vN_s1024/movie_year/physical/vM/
+  metrics.json
+  scores.npz
 ```
 
-Step-zero validation is recorded separately. Validation ties retain the earlier
-checkpoint. Do not initialize the full pilot from the smoke checkpoint. Existing
-training output directories are rejected; choose a fresh tag for retries or new
-settings. This initial trainer does not resume interrupted optimizer state.
+Combined experiment and reports:
 
-## 3. Evaluate the fine-tuned checkpoint
+```text
+results/motif_finetune_matrix_imdb_lp_matrix_s1024/
+  experiment.json
+  logs/
+  tables/
+    summary.json
+    report.md
+    performance.csv
+    comparisons.csv
+    classification_diagonal.tex
+    classification_all.tex
+    transfer_accuracy.tex
+    transfer_macro_f1.tex
+    per_variant_comparisons.tex
+    transfer_comparisons.tex
+    link_prediction_diagonal.tex
+    link_prediction_all.tex
+    transfer_mrr.tex
+```
 
-After training finishes, evaluate all 834 test queries on each physical variant:
+The runner generates these automatically. To regenerate tables without running
+training or inference, use this on the HPC while the score arrays and checkpoints
+are still available:
 
 ```bash
-python -u script/eval_lp.py \
-  --stage finetuned --dataset imdb --task movie_year \
-  --view physical --no-repeat \
-  --checkpoint results/motif_finetune_imdb_lp_pilot/movie_year/train_v1/seed1024/best.pth \
-  --run-tag v1ft_s1024 \
-  2>&1 | tee logs/imdb_movie_year_finetuned_v1ft_s1024.log
+python script/report_finetune_matrix.py \
+  --matrix results/motif_finetune_matrix_imdb_lp_matrix_s1024
 ```
 
-Every variant uses the same selected weights and the same test queries/candidates.
-The evaluator checks training provenance and checkpoint weights, freezes them for
-scoring and retains the zero-shot metric definitions. Fine-tuned results require
-the same dataset export and model configuration used for training. They are
-labelled and stored separately from zero-shot results.
+The presentation tables are:
 
-## 4. Tables and Overleaf
+* `classification_diagonal.tex`: four matched-variant rows, with Accuracy,
+  macro Precision, macro Recall, Micro-F1 and Macro-F1.
+* `classification_all.tex`: all 16 rows with explicit **Train** and **Test**
+  columns and the same classification metrics.
+* `transfer_accuracy.tex` and `transfer_macro_f1.tex`: 4-by-4 matrices, training
+  variant on rows and test variant on columns.
+* `per_variant_comparisons.tex`: six variant pairs using the independently
+  trained diagonal models. Both training and representation vary here.
+* `transfer_comparisons.tex`: six test-variant pairs for each of the four fixed
+  checkpoints, with Agreement@1 and Kendall tau-b in separate columns. These
+  compare representations while holding the trained weights fixed.
+* The separate `link_prediction_*.tex` and `transfer_mrr.tex` files retain
+  MOTIF-style ranking metrics with explicit 20-candidate captions.
 
-After inference succeeds:
+The original single-checkpoint reporter still requires identical weights within
+each evaluation row. The matrix reporter explicitly handles comparisons across
+independently trained models and checks that initialization, targets, batch
+order and budgets agree. Presentation tables omit compiled and repeat controls.
 
-```bash
-python script/report_lp.py --stage finetuned --dataset imdb --run-tag v1ft_s1024
-```
+## 4. Overleaf
 
-Results go to `results/motif_finetuned_imdb_lp_v1ft_s1024/tables/`, with the same
-performance metrics and all six Agreement@1/Kendall tau-b variant comparisons.
-Captions identify the v1 fine-tune. To package the saved reports for Overleaf:
+Package the combined saved report:
 
 ```bash
 python script/export_overleaf.py \
-  --run results/motif_finetuned_imdb_lp_v1ft_s1024 \
-  --output results/overleaf/motif_imdb_finetuned_v1_s1024
+  --run results/motif_finetune_matrix_imdb_lp_matrix_s1024 \
+  --output results/overleaf/motif_imdb_finetune_matrix_s1024
 ```
 
-This first pilot uses one training seed. Error bars remain query-bootstrap standard
-errors, not training-seed variability. The later multi-seed study should use at
-least three training seeds and report mean/standard deviation across seeds
-separately, following guide C4/C6. Results remain preliminary pending upstream
-scoring/reproduction validation.
+Add `--include-lp` to include MRR/Hits tables and the MRR matrix. Upload the
+generated ZIP to Overleaf and compile `main.tex` there. The exporter reads only
+the saved summary, so it can also run locally after pulling the text reports;
+raw score arrays and checkpoints can remain on the HPC.
 
-Movie-Director can later use `--task movie_director` and its v1/v3 family with a
-separately trained checkpoint. These instructions begin with Movie-Year, the
-completed zero-shot task.
+You can combine this matrix with IMDb and DBLP zero-shot reports in the same
+project; see [Overleaf results](OVERLEAF_RESULTS.md). Fine-tuning tables use a
+separate `matrix/` subdirectory and distinct LaTeX labels.
+
+Movie-Director can later use `--task movie_director` and its v1/v3 family, producing
+a 2-by-2 experiment. Choose its own run tag, for example `director_matrix`.
