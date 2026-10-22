@@ -1,0 +1,3 @@
+step,loss,grad_norm_before_clip,batch_size,removed_edges,validation_mrr,validation_hits@1
+1,0.8606440424919128,8.173663139343262,4,8,,
+2,0.8573476672172546,4.552099704742432,4,8,0.2007470406270716,0.125

@@ -1,0 +1,19 @@
+% Requires \usepackage{booktabs}
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrr}
+\toprule
+Input & Agreement@1 & Kendall $\tau_b$ \\
+\midrule
+v1 vs v2 & $0.1295 \pm 0.0115$ & $0.2466 \pm 0.0100$ \\
+v1 vs v3 & $0.1199 \pm 0.0116$ & $0.3918 \pm 0.0102$ \\
+v1 vs v4 & $0.5815 \pm 0.0170$ & $0.8247 \pm 0.0050$ \\
+v2 vs v3 & $0.4736 \pm 0.0174$ & $0.6977 \pm 0.0073$ \\
+v2 vs v4 & $0.1595 \pm 0.0120$ & $0.3052 \pm 0.0098$ \\
+v3 vs v4 & $0.0887 \pm 0.0097$ & $0.3003 \pm 0.0099$ \\
+\bottomrule
+\end{tabular}
+\caption{MOTIF / IMDb / Movie-Year (20-candidate invariance). Preliminary fine-tuned checkpoint evaluation on the test split; 834 queries. Checkpoint fine-tuned on physical/v3, selected by validation MRR. Both columns use the same original 20 candidates per query. Agreement@1 compares predicted entity IDs; Kendall tau-b compares candidate rankings within each query and is then averaged over queries. Representation differences must be interpreted against the reference-repeat noise floor. Values are estimates plus/minus bootstrap standard error from 1000 query resamples.}
+\label{tab:motif-movie_year-invariance}
+\end{table}

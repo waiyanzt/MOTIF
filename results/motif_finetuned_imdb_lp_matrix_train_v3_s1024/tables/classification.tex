@@ -1,0 +1,17 @@
+% Requires \usepackage{booktabs}
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+Input & Accuracy & Precision (macro) & Recall (macro) & Micro-F1 & Macro-F1 \\
+\midrule
+physical/v1 & $0.0012 \pm 0.0012$ & $0.0000 \pm 0.0000$ & $0.0110 \pm 0.0053$ & $0.0012 \pm 0.0012$ & $0.0000 \pm 0.0000$ \\
+physical/v2 & $0.0012 \pm 0.0012$ & $0.0000 \pm 0.0000$ & $0.0110 \pm 0.0053$ & $0.0012 \pm 0.0012$ & $0.0000 \pm 0.0000$ \\
+physical/v3 & $0.0012 \pm 0.0012$ & $0.0000 \pm 0.0000$ & $0.0110 \pm 0.0053$ & $0.0012 \pm 0.0012$ & $0.0000 \pm 0.0000$ \\
+physical/v4 & $0.0012 \pm 0.0012$ & $0.0000 \pm 0.0000$ & $0.0110 \pm 0.0053$ & $0.0012 \pm 0.0012$ & $0.0000 \pm 0.0000$ \\
+\bottomrule
+\end{tabular}
+\caption{MOTIF / IMDb / Movie-Year (full-type classification: 91 classes). Preliminary fine-tuned checkpoint evaluation on the test split; 834 queries. Checkpoint fine-tuned on physical/v3, selected by validation MRR. Predict the actual calendar year among all 91 target-type entities. Precision and recall are macro-averaged over this fixed class set with zero division set to zero. Micro-F1 equals accuracy for single-label prediction. Top-1 ties use the smallest global entity ID. Values are estimates plus/minus bootstrap standard error from 1000 query resamples.}
+\label{tab:motif-movie_year-classification}
+\end{table}
