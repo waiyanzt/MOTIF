@@ -19,6 +19,22 @@ pip install ninja easydict pyyaml
 pip triton-nightly
 ```
 
+## IMDb and DBLP preprocessing ##
+
+For our IMDb and DBLP representation variants, place raw files under
+`rai-datasets/raw/IMDB/` and `rai-datasets/raw/DBLP/`, then run
+`python script/prepare_imdb_lp.py` and `python script/prepare_dblp_lp.py`.
+These CPU-only entry points reuse SCR's canonical preprocessing and export
+structural arrays for the MOTIF evaluation adapter. See
+[data preparation](docs/DATA_PREPARATION.md) for dependencies, layouts and scope.
+The entire `rai-datasets/` directory is git-ignored.
+Adapter-ready outputs are `rai-datasets/preprocessed/IMDB/` and
+`rai-datasets/preprocessed/DBLP/`; intermediate split archives and bundles live
+under `rai-datasets/preprocessed/_build/`.
+
+For frozen evaluation, all-pairs invariance and LaTeX tables, see
+[zero-shot evaluation](docs/ZERO_SHOT_EVALUATION.md).
+
 ## Synthetic experiments ##
 
 We include the synthetic experiments shown in the paper in `Synthetic_experiment.ipynb` on different variants of *ConnectHub* datasets.

@@ -165,8 +165,19 @@ output/
 .DS_Store
 kg-datasets/
 
+# Local RAI raw datasets and generated preprocessing artifacts.
+/rai-datasets/
+
 *.log
 *.csv
 *.out
 *.tmp
 ULTRA_pilot
+
+# Retain reports and LaTeX tables; exclude raw score arrays and other artifacts.
+/results/**
+!/results/**/
+!/results/**/*.json
+!/results/**/*.md
+!/results/**/*.tex
+!/results/**/*.csv
