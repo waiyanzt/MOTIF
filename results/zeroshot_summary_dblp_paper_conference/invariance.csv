@@ -1,0 +1,4 @@
+method,comparison,tau_mean,tau_std
+MOTIF (ZS),v1 vs v2,0.9505942275042446,0.0
+MOTIF (ZS),v1 vs v3,0.9570142535633909,0.0
+MOTIF (ZS),v2 vs v3,0.9591345204722234,0.0

@@ -1,0 +1,44 @@
+["/nfs/hpc/share/tinw/idealab/MOTIF/.venv/bin/python", "/nfs/hpc/share/tinw/idealab/MOTIF/script/finetune_dblp_lp.py", "--task", "paper_conference", "--train-variant", "v2", "--data", "/nfs/hpc/share/tinw/idealab/MOTIF/rai-datasets/preprocessed/DBLP", "--checkpoint", "/nfs/hpc/share/tinw/idealab/MOTIF/ckpts/motif_3g.pth", "--config", "/nfs/hpc/share/tinw/idealab/MOTIF/config/transductive/MOTIF_inference.yaml", "--output", "/nfs/hpc/share/tinw/idealab/MOTIF/results", "--device", "cuda:0", "--seed", "1566911444", "--steps", "1000", "--batch-size", "4", "--lr", "0.0005", "--adversarial-temperature", "1.0", "--max-grad-norm", "1.0", "--validate-every", "100", "--val-limit", "0", "--run-tag", "seeds"]
+Initial validation MRR=0.5454
+Step 1/1000: loss=0.7716
+Step 25/1000: loss=0.8857
+Step 50/1000: loss=0.7055
+Step 75/1000: loss=0.5941
+Step 100/1000: loss=0.6163, validation MRR=0.5685, best step=100
+Step 125/1000: loss=0.7041
+Step 150/1000: loss=0.5304
+Step 175/1000: loss=0.6988
+Step 200/1000: loss=0.6130, validation MRR=0.5768, best step=200
+Step 225/1000: loss=0.7698
+Step 250/1000: loss=0.6054
+Step 275/1000: loss=0.6951
+Step 300/1000: loss=0.5534, validation MRR=0.5739, best step=200
+Step 325/1000: loss=0.7242
+Step 350/1000: loss=0.5504
+Step 375/1000: loss=0.6616
+Step 400/1000: loss=0.6447, validation MRR=0.5778, best step=400
+Step 425/1000: loss=0.4963
+Step 450/1000: loss=0.6583
+Step 475/1000: loss=0.4771
+Step 500/1000: loss=0.5505, validation MRR=0.5845, best step=500
+Step 525/1000: loss=0.6712
+Step 550/1000: loss=0.5618
+Step 575/1000: loss=0.6147
+Step 600/1000: loss=0.6808, validation MRR=0.5841, best step=500
+Step 625/1000: loss=0.6402
+Step 650/1000: loss=0.5159
+Step 675/1000: loss=0.7225
+Step 700/1000: loss=0.5180, validation MRR=0.5850, best step=700
+Step 725/1000: loss=0.7926
+Step 750/1000: loss=0.7770
+Step 775/1000: loss=0.5531
+Step 800/1000: loss=0.6362, validation MRR=0.5821, best step=700
+Step 825/1000: loss=0.6713
+Step 850/1000: loss=0.6347
+Step 875/1000: loss=0.6186
+Step 900/1000: loss=0.4869, validation MRR=0.5817, best step=700
+Step 925/1000: loss=0.6596
+Step 950/1000: loss=0.5647
+Step 975/1000: loss=0.6723
+Step 1000/1000: loss=0.6734, validation MRR=0.5855, best step=1000
+Saved fine-tuned checkpoint: /nfs/hpc/share/tinw/idealab/MOTIF/results/motif_finetune_dblp_lp_seeds/paper_conference/train_v2/seed1566911444/best.pth

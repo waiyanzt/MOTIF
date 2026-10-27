@@ -1,0 +1,19 @@
+% Requires \usepackage{booktabs}
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrrr}
+\toprule
+Input & Agreement@1 & Kendall $\tau_b$ & $\Delta$MRR \\
+\midrule
+v1 vs v2 & $0.7146 \pm 0.0154$ & $0.4893 \pm 0.0105$ & $-0.0153 \pm 0.0072$ \\
+v1 vs v3 & $0.5384 \pm 0.0186$ & $0.5116 \pm 0.0084$ & $-0.0418 \pm 0.0069$ \\
+v1 vs v4 & $0.7650 \pm 0.0148$ & $0.7950 \pm 0.0059$ & $0.0097 \pm 0.0051$ \\
+v2 vs v3 & $0.5252 \pm 0.0184$ & $0.6440 \pm 0.0061$ & $-0.0266 \pm 0.0067$ \\
+v2 vs v4 & $0.6391 \pm 0.0167$ & $0.4679 \pm 0.0093$ & $0.0250 \pm 0.0075$ \\
+v3 vs v4 & $0.4269 \pm 0.0181$ & $0.4876 \pm 0.0081$ & $0.0515 \pm 0.0077$ \\
+\bottomrule
+\end{tabular}
+\caption{MOTIF / IMDb / Movie-Year (20-candidate invariance). Preliminary fine-tuned checkpoint evaluation on the test split; 834 queries. Checkpoint fine-tuned on physical/v2, selected by validation MRR. All columns use the same original 20 candidates per query. Agreement@1 compares predicted entity IDs; Kendall tau-b compares candidate rankings within each query and is then averaged over queries. Delta MRR is the second variant minus the first. Representation differences must be interpreted against the reference-repeat noise floor. Values are estimates plus/minus bootstrap standard error from 1000 query resamples.}
+\label{tab:motif-movie_year-invariance}
+\end{table}

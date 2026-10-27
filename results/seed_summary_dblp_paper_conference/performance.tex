@@ -1,0 +1,31 @@
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{||l||l||c|c|c||c|c||}
+\hline
+\textbf{Method} & \textbf{Variant} & \textbf{MRR} & \textbf{Hits@1} & \textbf{Hits@3} & \textbf{Precision} & \textbf{Recall} \\
+\hline\hline
+CMPNN & v1 & $0.6195 \pm 0.0026$ & $0.4121 \pm 0.0038$ & $0.8017 \pm 0.0033$ & $0.2211 \pm 0.0134$ & $0.8878 \pm 0.0107$ \\
+\hline
+CMPNN & v2 & $0.6132 \pm 0.0039$ & $0.4125 \pm 0.0064$ & $0.7819 \pm 0.0042$ & $0.2105 \pm 0.0247$ & $0.8726 \pm 0.0360$ \\
+\hline
+CMPNN & v3 & $0.6150 \pm 0.0053$ & $0.4060 \pm 0.0080$ & $0.7967 \pm 0.0032$ & $0.2232 \pm 0.0235$ & $0.8087 \pm 0.0310$ \\
+\hline
+\hline
+MOTIF (ZS) & v1 & $0.5810 \pm 0.0000$ & $0.3886 \pm 0.0000$ & $0.7243 \pm 0.0000$ & $0.1858 \pm 0.0000$ & $0.6992 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v2 & $0.5696 \pm 0.0000$ & $0.3800 \pm 0.0000$ & $0.7052 \pm 0.0000$ & $0.1331 \pm 0.0000$ & $0.8323 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v3 & $0.5727 \pm 0.0000$ & $0.3830 \pm 0.0000$ & $0.7089 \pm 0.0000$ & $0.1179 \pm 0.0000$ & $0.8740 \pm 0.0000$ \\
+\hline
+\hline
+MOTIF (FT) & v1 & $0.6061 \pm 0.0040$ & $0.4085 \pm 0.0050$ & $0.7636 \pm 0.0028$ & $0.2844 \pm 0.0109$ & $0.7054 \pm 0.0163$ \\
+\hline
+MOTIF (FT) & v2 & $0.6001 \pm 0.0022$ & $0.3998 \pm 0.0028$ & $0.7606 \pm 0.0056$ & $0.2816 \pm 0.0061$ & $0.7042 \pm 0.0163$ \\
+\hline
+MOTIF (FT) & v3 & $0.6189 \pm 0.0034$ & $0.4152 \pm 0.0021$ & $0.7922 \pm 0.0103$ & $0.2996 \pm 0.0880$ & $0.6902 \pm 0.1519$ \\
+\hline
+\end{tabular}
+\caption{DBLP Paper--Conference link prediction over 20 candidates per query. Mean $\pm$ population std over training seeds (20241017, 20251017, 1566911444); zero-shot has no training seed (std 0). Precision/Recall pool all (query, candidate) pairs at $\sigma(s) \geq 0.5$.}
+\label{tab:dblp_paper_conference_seed_performance}
+\end{table}

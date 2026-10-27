@@ -1,0 +1,17 @@
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{||l||l||c|c|c||c|c||}
+\hline
+\textbf{Method} & \textbf{Variant} & \textbf{MRR} & \textbf{Hits@1} & \textbf{Hits@3} & \textbf{Precision} & \textbf{Recall} \\
+\hline\hline
+MOTIF (ZS) & v1 & $0.5810 \pm 0.0000$ & $0.3886 \pm 0.0000$ & $0.7243 \pm 0.0000$ & $0.1858 \pm 0.0000$ & $0.6992 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v2 & $0.5696 \pm 0.0000$ & $0.3800 \pm 0.0000$ & $0.7052 \pm 0.0000$ & $0.1331 \pm 0.0000$ & $0.8323 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v3 & $0.5727 \pm 0.0000$ & $0.3830 \pm 0.0000$ & $0.7089 \pm 0.0000$ & $0.1179 \pm 0.0000$ & $0.8740 \pm 0.0000$ \\
+\hline
+\end{tabular}
+\caption{DBLP paper--conference link prediction over 20 candidates per query. Zero-shot only (std 0). Precision/Recall pool all (query, candidate) pairs at $\sigma(s) \geq 0.5$.}
+\label{tab:dblp_paper_conference_seed_performance}
+\end{table}

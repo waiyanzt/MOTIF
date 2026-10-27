@@ -1,0 +1,232 @@
+"""Seed-averaged MOTIF (ZS)/(FT) tables in the lab format, optionally beside a baseline.
+
+Follows SCR/INV-GNN-12D9/docs/results/METRICS.md: every cell is mean ± population std
+(ddof=0) over training seeds. FT rows are the matched-variant (diagonal) models, i.e. the
+"original" arm: one model per variant and seed. Kendall-tau compares two of those models on
+the same queries and candidates within one seed. Zero-shot inference has no training seed,
+so its single run is reported with std 0.
+"""
+from __future__ import annotations
+
+import argparse
+from itertools import combinations
+import json
+from pathlib import Path
+import re
+
+import numpy as np
+
+from lp_data import ROOT, TASK_VARIANTS, DBLP_TASK_VARIANTS, write_json
+from lp_metrics import average_ranks, binary_metrics, check_alignment, mean_tau_b
+from report_lp import write_csv
+
+METRICS = (("mrr", "MRR"), ("hits@1", "Hits@1"), ("hits@3", "Hits@3"),
+           ("precision", "Precision"), ("recall", "Recall"))
+DATASETS = {"imdb": TASK_VARIANTS, "dblp": DBLP_TASK_VARIANTS}
+# Baseline .tex block suffixes and column orders, from SCR docs/results/*_lp.tex.
+BASELINE_TASK_LABELS = {"movie_year": " / Movie--Year (MY)", "movie_director": " / Movie--Director (MD)",
+                        "paper_conference": ""}
+BASELINE_RESULT_COLUMNS = ("precision", "recall", "f1", "hits@1", "hits@3", "mrr")
+BASELINE_TAU_COLUMNS = ("tau", "tau@1", "tau@3")
+
+
+def load_scores(path):
+    with np.load(path) as source:
+        return {key: source[key].copy() for key in source.files}
+
+
+def performance(arrays):
+    ranks = average_ranks(arrays["scores"])
+    return {"mrr": float(np.mean(1 / ranks)), "hits@1": float(np.mean(ranks <= 1)),
+            "hits@3": float(np.mean(ranks <= 3)),
+            **binary_metrics(arrays["scores"], arrays["candidates"], arrays["positives"])}
+
+
+def aggregate(values):
+    values = np.asarray(values, dtype=float)
+    return {"mean": float(values.mean()), "std": float(values.std(ddof=0)), "runs": values.tolist()}
+
+
+def finetuned_runs(roots, dataset, task, variants):
+    """Diagonal score arrays per training seed, from run_finetune_matrix.py outputs."""
+    runs, shared = {}, None
+    for root in roots:
+        manifest = json.loads((root / "experiment.json").read_text(encoding="utf-8"))
+        contract = manifest["compute_contract"]
+        if (contract["dataset"], contract["task"], contract["variants"]) != (dataset, task, list(variants)):
+            raise ValueError(f"Matrix is not {dataset}/{task} with variants {variants}: {root}")
+        normalized = {key: value for key, value in contract.items() if key != "seed"}
+        if shared is None:
+            shared = normalized
+        elif normalized != shared:
+            raise ValueError(f"Fine-tuning settings or code differ from the first matrix: {root}")
+        if contract["seed"] in runs:
+            raise ValueError(f"Duplicate training seed {contract['seed']}: {root}")
+        runs[contract["seed"]] = {}
+        for variant in variants:
+            if variant not in manifest["evaluations"].get(variant, {}):
+                raise ValueError(f"Missing matched-variant evaluation {variant}: {root}")
+            directory = root.parent / manifest["evaluation_roots"][variant] / task / "physical" / variant
+            runs[contract["seed"]][variant] = load_scores(directory / "scores.npz")
+    return runs
+
+
+def summarize(runs, variants):
+    """runs: {seed: {variant: arrays}} -> per-variant and per-pair mean ± std over seeds."""
+    rows = {v: {key: aggregate([performance(runs[s][v])[key] for s in runs]) for key, _ in METRICS}
+            for v in variants}
+    pairs = {}
+    for first, second in combinations(variants, 2):
+        taus = [mean_tau_b(runs[s][first]["scores"], runs[s][second]["scores"]) for s in runs]
+        pairs[f"{first} vs {second}"] = {"tau": aggregate([t for t, _ in taus]),
+                                         "undefined_tau_queries": [u for _, u in taus]}
+    return {"seeds": sorted(runs), "performance": rows, "invariance": pairs}
+
+
+def parse_baseline(path, model, task, arm="original"):
+    """Read one model/arm block from the RESULTS and INVARIANCE sections of a lab .tex file."""
+    text = path.read_text(encoding="utf-8")
+    header = f"% ---- {model} / {arm}{BASELINE_TASK_LABELS[task]}"
+
+    def block(section):
+        lines = text.split(f"%% ################################ {section}", 1)[1].splitlines()
+        start = next((i for i, line in enumerate(lines) if line.strip() == header), None)
+        if start is None:
+            raise ValueError(f"'{header}' not found in the {section} section of {path}")
+        rows = []
+        for line in lines[start + 1:]:
+            if line.startswith("%") or not line.strip():
+                if rows or line.startswith(("%%", "% ----")):
+                    break
+                continue
+            cells = [cell.strip() for cell in line.rstrip("\\ ").split("&") if cell.strip()]
+            rows.append((cells[0], [tuple(map(float, cell.split("$\\pm$"))) for cell in cells[1:]]))
+        return rows
+
+    def variant(label):
+        return "v" + re.search(r"(\d+)\s*$", label).group(1)
+
+    def pair(label):
+        first, second = re.split(r"\s+vs\.?\s+", label)
+        return f"{variant(first)} vs {variant(second)}"
+
+    performance_rows = {variant(label): {key: {"mean": mean, "std": std}
+                                         for key, (mean, std) in zip(BASELINE_RESULT_COLUMNS, values)}
+                        for label, values in block("RESULTS")}
+    pairs = {pair(label): {key: {"mean": mean, "std": std} for key, (mean, std) in zip(BASELINE_TAU_COLUMNS, values)}
+             for label, values in block("INVARIANCE")}
+    return {"source": str(path), "arm": arm, "performance": performance_rows, "invariance": pairs}
+
+
+def cell(value, latex=True):
+    if value is None:
+        return "--"
+    return (f"${value['mean']:.4f} \\pm {value['std']:.4f}$" if latex
+            else f"{value['mean']:.4f} ± {value['std']:.4f}")
+
+
+def latex_table(groups, columns, row_keys, label, caption, first_header):
+    # Ranking and binary-classification columns are boxed separately, as in assets/table format.png.
+    spec = "||l||l||c|c|c||c|c||" if columns == METRICS else "||l||l||" + "|".join("c" for _ in columns) + "||"
+    lines = ["\\begin{table}[t]", "\\centering", "\\small", f"\\begin{{tabular}}{{{spec}}}", "\\hline",
+             " & ".join(f"\\textbf{{{name}}}" for name in ("Method", first_header) + tuple(n for _, n in columns))
+             + " \\\\", "\\hline\\hline"]
+    for index, (method, rows) in enumerate(groups):
+        if index:
+            lines.append("\\hline")
+        for key in row_keys:
+            if key not in rows:
+                continue
+            values = [cell(rows[key].get(metric)) for metric, _ in columns]
+            lines.extend([" & ".join([method, key] + values) + " \\\\", "\\hline"])
+    lines.extend(["\\end{tabular}", f"\\caption{{{caption}}}", f"\\label{{{label}}}", "\\end{table}", ""])
+    return "\n".join(lines)
+
+
+def markdown_table(groups, columns, row_keys, first_header):
+    lines = ["| Method | " + first_header + " | " + " | ".join(n for _, n in columns) + " |",
+             "|---|---|" + "---:|" * len(columns)]
+    for method, rows in groups:
+        lines.extend("| " + " | ".join([method, key] + [cell(rows[key].get(m), latex=False) for m, _ in columns])
+                     + " |" for key in row_keys if key in rows)
+    return lines
+
+
+def write_outputs(summary, output):
+    output.mkdir(parents=True, exist_ok=True)
+    dataset, task, variants = summary["dataset"], summary["task"], summary["variants"]
+    pairs = [f"{a} vs {b}" for a, b in combinations(variants, 2)]
+    performance_groups = [(name, block["performance"]) for name, block in summary["methods"].items()]
+    tau_groups = [(name, block["invariance"]) for name, block in summary["methods"].items()]
+    seeds = summary["finetune_seeds"]
+    note = (f"Mean $\\pm$ population std over training seeds ({', '.join(map(str, seeds))}); "
+            "zero-shot has no training seed (std 0). ") if seeds else "Zero-shot only (std 0). "
+    name = {"imdb": "IMDb", "dblp": "DBLP"}[dataset] + " " + task.replace("_", "--").title()
+    (output / "performance.tex").write_text(latex_table(
+        performance_groups, METRICS, variants, f"tab:{dataset}_{task}_seed_performance",
+        f"{name} link prediction over 20 candidates per query. {note}"
+        "Precision/Recall pool all (query, candidate) pairs at $\\sigma(s) \\geq 0.5$.", "Variant"),
+        encoding="utf-8")
+    (output / "invariance.tex").write_text(latex_table(
+        tau_groups, (("tau", "Kendall-$\\tau$"),), pairs, f"tab:{dataset}_{task}_seed_invariance",
+        f"{name} Kendall-$\\tau_b$ between candidate rankings of two variants' models on the same queries, "
+        f"averaged over queries. {note}", "Comparison"), encoding="utf-8")
+    report = [f"# {name}: seed-averaged results", "",
+              note.replace("$\\pm$", "±") + "FT rows use the model trained and tested on the same variant.", "",
+              "## Performance", "", *markdown_table(performance_groups, METRICS, variants, "Variant"), "",
+              "## Invariance", "", *markdown_table(tau_groups, (("tau", "Kendall-τ"),), pairs, "Comparison"), ""]
+    (output / "report.md").write_text("\n".join(report), encoding="utf-8")
+    write_csv(output / "performance.csv", [
+        {"method": method, "variant": v, **{f"{k}_{s}": rows[v][k][s] for k, _ in METRICS for s in ("mean", "std")
+                                            if k in rows[v]}}
+        for method, rows in performance_groups for v in variants if v in rows])
+    write_csv(output / "invariance.csv", [
+        {"method": method, "comparison": p, "tau_mean": rows[p]["tau"]["mean"], "tau_std": rows[p]["tau"]["std"]}
+        for method, rows in tau_groups for p in pairs if p in rows])
+    write_json(output / "summary.json", summary)
+    print(f"Wrote seed-averaged tables: {output}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--dataset", choices=DATASETS, default="imdb")
+    parser.add_argument("--task")
+    parser.add_argument("--zeroshot", type=Path, help="A report_lp/eval_lp run root, e.g. results/motif_zeroshot_imdb_lp_full")
+    parser.add_argument("--finetune", type=Path, nargs="*", default=[],
+                        help="One run_finetune_matrix.py root per training seed")
+    parser.add_argument("--baseline-tex", type=Path, help="Lab results file, e.g. SCR/.../docs/results/IMDB_lp.tex")
+    parser.add_argument("--baseline", default="CMPNN", help="Model name of the baseline block")
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args()
+    task = args.task or next(iter(DATASETS[args.dataset]))
+    variants = list(DATASETS[args.dataset][task])
+    if not args.zeroshot and not args.finetune:
+        parser.error("Give --zeroshot and/or --finetune")
+
+    methods, reference = {}, None
+    if args.baseline_tex:
+        methods[args.baseline] = parse_baseline(args.baseline_tex, args.baseline, task)
+    sources = []
+    if args.zeroshot:
+        zeroshot = {"zero-shot": {v: load_scores(args.zeroshot / task / "physical" / v / "scores.npz")
+                                  for v in variants}}
+        sources.append(("MOTIF (ZS)", zeroshot))
+    finetuned = finetuned_runs(args.finetune, args.dataset, task, variants) if args.finetune else {}
+    if finetuned:
+        sources.append(("MOTIF (FT)", finetuned))
+    for method, runs in sources:
+        for arrays in (a for seed in runs.values() for a in seed.values()):
+            if reference is None:
+                reference = arrays
+            check_alignment(reference, arrays)
+        methods[method] = {"source": "motif", **summarize(runs, variants)}
+    summary = {"format": "motif_seed_summary_v1", "dataset": args.dataset, "task": task, "variants": variants,
+               "finetune_seeds": sorted(finetuned), "aggregation": "mean and population std (ddof=0) over seeds",
+               "zeroshot": str(args.zeroshot) if args.zeroshot else None,
+               "finetune": [str(path) for path in args.finetune], "methods": methods}
+    output = args.output or ROOT / "results" / f"seed_summary_{args.dataset}_{task}"
+    write_outputs(summary, output)
+
+
+if __name__ == "__main__":
+    main()

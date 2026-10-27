@@ -1,0 +1,44 @@
+["/nfs/hpc/share/tinw/idealab/MOTIF/.venv/bin/python", "/nfs/hpc/share/tinw/idealab/MOTIF/script/finetune_imdb_lp.py", "--task", "movie_year", "--train-variant", "v1", "--data", "/nfs/hpc/share/tinw/idealab/MOTIF/rai-datasets/preprocessed/IMDB", "--checkpoint", "/nfs/hpc/share/tinw/idealab/MOTIF/ckpts/motif_3g.pth", "--config", "/nfs/hpc/share/tinw/idealab/MOTIF/config/transductive/MOTIF_inference.yaml", "--output", "/nfs/hpc/share/tinw/idealab/MOTIF/results", "--device", "cuda:0", "--seed", "20241017", "--steps", "1000", "--batch-size", "4", "--lr", "0.0005", "--adversarial-temperature", "1.0", "--max-grad-norm", "1.0", "--validate-every", "100", "--val-limit", "0", "--run-tag", "seeds"]
+Initial validation MRR=0.2010
+Step 1/1000: loss=0.7247
+Step 25/1000: loss=0.6992
+Step 50/1000: loss=0.6914
+Step 75/1000: loss=0.7034
+Step 100/1000: loss=0.6923, validation MRR=0.2009, best step=100
+Step 125/1000: loss=0.6892
+Step 150/1000: loss=0.7187
+Step 175/1000: loss=0.6986
+Step 200/1000: loss=0.6935, validation MRR=0.1858, best step=100
+Step 225/1000: loss=0.6922
+Step 250/1000: loss=0.6914
+Step 275/1000: loss=0.6908
+Step 300/1000: loss=0.6940, validation MRR=0.1963, best step=100
+Step 325/1000: loss=0.6929
+Step 350/1000: loss=0.6847
+Step 375/1000: loss=0.6937
+Step 400/1000: loss=0.6931, validation MRR=0.2132, best step=400
+Step 425/1000: loss=0.6968
+Step 450/1000: loss=0.6924
+Step 475/1000: loss=0.6930
+Step 500/1000: loss=0.7005, validation MRR=0.1960, best step=400
+Step 525/1000: loss=0.6982
+Step 550/1000: loss=0.6917
+Step 575/1000: loss=0.6957
+Step 600/1000: loss=0.6918, validation MRR=0.1955, best step=400
+Step 625/1000: loss=0.6902
+Step 650/1000: loss=0.7025
+Step 675/1000: loss=0.6963
+Step 700/1000: loss=0.6954, validation MRR=0.2374, best step=700
+Step 725/1000: loss=0.6949
+Step 750/1000: loss=0.6065
+Step 775/1000: loss=0.6967
+Step 800/1000: loss=0.6033, validation MRR=0.2155, best step=700
+Step 825/1000: loss=0.6963
+Step 850/1000: loss=0.6962
+Step 875/1000: loss=0.6915
+Step 900/1000: loss=0.6886, validation MRR=0.2210, best step=700
+Step 925/1000: loss=0.6823
+Step 950/1000: loss=0.6843
+Step 975/1000: loss=0.6920
+Step 1000/1000: loss=0.6963, validation MRR=0.2334, best step=700
+Saved fine-tuned checkpoint: /nfs/hpc/share/tinw/idealab/MOTIF/results/motif_finetune_imdb_lp_seeds/movie_year/train_v1/seed20241017/best.pth

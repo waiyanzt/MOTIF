@@ -1,0 +1,31 @@
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{||l||l||c||}
+\hline
+\textbf{Method} & \textbf{Comparison} & \textbf{Kendall-$\tau$} \\
+\hline\hline
+CMPNN & v1 vs v2 & $0.6863 \pm 0.0157$ \\
+\hline
+CMPNN & v1 vs v3 & $0.8298 \pm 0.0176$ \\
+\hline
+CMPNN & v2 vs v3 & $0.7108 \pm 0.0150$ \\
+\hline
+\hline
+MOTIF (ZS) & v1 vs v2 & $0.9506 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v1 vs v3 & $0.9570 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v2 vs v3 & $0.9591 \pm 0.0000$ \\
+\hline
+\hline
+MOTIF (FT) & v1 vs v2 & $0.8958 \pm 0.0180$ \\
+\hline
+MOTIF (FT) & v1 vs v3 & $0.8202 \pm 0.0408$ \\
+\hline
+MOTIF (FT) & v2 vs v3 & $0.8055 \pm 0.0511$ \\
+\hline
+\end{tabular}
+\caption{DBLP Paper--Conference Kendall-$\tau_b$ between candidate rankings of two variants' models on the same queries, averaged over queries. Mean $\pm$ population std over training seeds (20241017, 20251017, 1566911444); zero-shot has no training seed (std 0). }
+\label{tab:dblp_paper_conference_seed_invariance}
+\end{table}

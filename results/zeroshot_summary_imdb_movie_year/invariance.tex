@@ -1,0 +1,23 @@
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{||l||l||c||}
+\hline
+\textbf{Method} & \textbf{Comparison} & \textbf{Kendall-$\tau$} \\
+\hline\hline
+MOTIF (ZS) & v1 vs v2 & $0.6166 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v1 vs v3 & $0.6748 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v1 vs v4 & $0.9101 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v2 vs v3 & $0.9114 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v2 vs v4 & $0.6672 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v3 vs v4 & $0.6433 \pm 0.0000$ \\
+\hline
+\end{tabular}
+\caption{IMDB movie--year Kendall-$\tau_b$ between candidate rankings of two variants' models on the same queries, averaged over queries. Zero-shot only (std 0). }
+\label{tab:imdb_movie_year_seed_invariance}
+\end{table}

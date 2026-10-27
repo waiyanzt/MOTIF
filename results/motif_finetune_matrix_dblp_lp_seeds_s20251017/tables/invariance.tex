@@ -1,0 +1,40 @@
+% Requires adjustbox.
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{5pt}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{|l|l|l|l|l|l|}
+\hline
+\textbf{Regime} & \textbf{Checkpoint trained on} & \textbf{Test graphs compared} & \textbf{Agreement@1} & \textbf{Kendall-$\tau_b$} & \textbf{$\Delta$MRR} \\
+\hline
+C-a & v1 and v2 (separate) & v1 vs v2 & $0.8826 \pm 0.0059$ & $0.9079 \pm 0.0010$ & $-0.0118 \pm 0.0029$ \\
+\hline
+C-a & v1 and v3 (separate) & v1 vs v3 & $0.7517 \pm 0.0083$ & $0.7633 \pm 0.0021$ & $0.0135 \pm 0.0042$ \\
+\hline
+C-a & v2 and v3 (separate) & v2 vs v3 & $0.7352 \pm 0.0086$ & $0.7333 \pm 0.0022$ & $0.0252 \pm 0.0044$ \\
+\hline
+C-b & v1 & v1 vs v2 & $0.9494 \pm 0.0042$ & $0.9516 \pm 0.0006$ & $-0.0023 \pm 0.0018$ \\
+\hline
+C-b & v1 & v1 vs v3 & $0.9591 \pm 0.0037$ & $0.9721 \pm 0.0004$ & $-0.0005 \pm 0.0016$ \\
+\hline
+C-b & v1 & v2 vs v3 & $0.9737 \pm 0.0030$ & $0.9680 \pm 0.0004$ & $0.0018 \pm 0.0013$ \\
+\hline
+C-b & v2 & v1 vs v2 & $0.9434 \pm 0.0044$ & $0.9571 \pm 0.0005$ & $-0.0024 \pm 0.0018$ \\
+\hline
+C-b & v2 & v1 vs v3 & $0.9362 \pm 0.0046$ & $0.9624 \pm 0.0005$ & $-0.0086 \pm 0.0020$ \\
+\hline
+C-b & v2 & v2 vs v3 & $0.9482 \pm 0.0043$ & $0.9812 \pm 0.0003$ & $-0.0061 \pm 0.0017$ \\
+\hline
+C-b & v3 & v1 vs v2 & $0.8991 \pm 0.0058$ & $0.9139 \pm 0.0008$ & $-0.0075 \pm 0.0025$ \\
+\hline
+C-b & v3 & v1 vs v3 & $0.7348 \pm 0.0081$ & $0.7788 \pm 0.0022$ & $0.0151 \pm 0.0045$ \\
+\hline
+C-b & v3 & v2 vs v3 & $0.7153 \pm 0.0082$ & $0.7633 \pm 0.0023$ & $0.0226 \pm 0.0046$ \\
+\hline
+\end{tabular}
+\end{adjustbox}
+\caption{Preliminary fine-tuned MOTIF on DBLP Paper--Conference; seed 20251017, 2,666 test queries; 1,000 optimizer steps per variant. All comparisons use the same 20 conferences per query. C-a compares separately trained models, each tested on its own variant; the checkpoint column names both training variants. Weights and graphs both change. C-b groups hold the selected checkpoint fixed across test variants, including its matched-variant reference. Delta MRR is the second test variant minus the first. Values are estimates $\pm$ query-bootstrap SE (1,000 resamples), not variation across training seeds.}
+\label{tab:motif-dblp-matrix-invariance}
+\end{table}

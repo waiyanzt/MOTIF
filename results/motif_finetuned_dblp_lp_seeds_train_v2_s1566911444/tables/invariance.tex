@@ -1,0 +1,16 @@
+% Requires \usepackage{booktabs}
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrrr}
+\toprule
+Input & Agreement@1 & Kendall $\tau_b$ & $\Delta$MRR \\
+\midrule
+v1 vs v2 & $0.9704 \pm 0.0033$ & $0.9579 \pm 0.0005$ & $0.0020 \pm 0.0013$ \\
+v1 vs v3 & $0.9685 \pm 0.0034$ & $0.9696 \pm 0.0004$ & $0.0010 \pm 0.0013$ \\
+v2 vs v3 & $0.9797 \pm 0.0028$ & $0.9697 \pm 0.0004$ & $-0.0010 \pm 0.0011$ \\
+\bottomrule
+\end{tabular}
+\caption{MOTIF / DBLP / Paper-Conference (20-candidate invariance). Preliminary fine-tuned checkpoint evaluation on the test split; 2666 queries. Checkpoint fine-tuned on physical/v2, selected by validation MRR. All columns use the same original 20 candidates per query. Agreement@1 compares predicted entity IDs; Kendall tau-b compares candidate rankings within each query and is then averaged over queries. Delta MRR is the second variant minus the first. Representation differences must be interpreted against the reference-repeat noise floor. Values are estimates plus/minus bootstrap standard error from 1000 query resamples.}
+\label{tab:motif-paper_conference-invariance}
+\end{table}

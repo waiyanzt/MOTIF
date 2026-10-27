@@ -1,0 +1,16 @@
+% Requires \usepackage{booktabs}
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Input & MRR & Hits@1 & Hits@3 & Hits@10 \\
+\midrule
+physical/v1 & $0.6092 \pm 0.0065$ & $0.4122 \pm 0.0092$ & $0.7671 \pm 0.0079$ & $0.9599 \pm 0.0039$ \\
+physical/v2 & $0.6069 \pm 0.0065$ & $0.4085 \pm 0.0093$ & $0.7659 \pm 0.0079$ & $0.9584 \pm 0.0040$ \\
+physical/v3 & $0.6087 \pm 0.0065$ & $0.4104 \pm 0.0093$ & $0.7674 \pm 0.0078$ & $0.9606 \pm 0.0039$ \\
+\bottomrule
+\end{tabular}
+\caption{MOTIF / DBLP / Paper-Conference (20-candidate link prediction). Preliminary fine-tuned checkpoint evaluation on the test split; 2666 queries. Checkpoint fine-tuned on physical/v1, selected by validation MRR. Tail-only ranking over all 20 conferences. Tied scores use average rank. Values are estimates plus/minus bootstrap standard error from 1000 query resamples.}
+\label{tab:motif-paper_conference-link_prediction}
+\end{table}

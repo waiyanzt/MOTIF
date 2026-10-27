@@ -1,0 +1,17 @@
+% Requires \usepackage{booktabs}
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Input & MRR & Hits@1 & Hits@3 & Hits@10 \\
+\midrule
+physical/v1 & $0.2419 \pm 0.0098$ & $0.1007 \pm 0.0106$ & $0.2338 \pm 0.0150$ & $0.5791 \pm 0.0174$ \\
+physical/v2 & $0.1969 \pm 0.0087$ & $0.0767 \pm 0.0093$ & $0.1679 \pm 0.0127$ & $0.4556 \pm 0.0168$ \\
+physical/v3 & $0.2034 \pm 0.0091$ & $0.0863 \pm 0.0099$ & $0.1691 \pm 0.0126$ & $0.4832 \pm 0.0172$ \\
+physical/v4 & $0.2270 \pm 0.0097$ & $0.0935 \pm 0.0103$ & $0.2098 \pm 0.0142$ & $0.5444 \pm 0.0179$ \\
+\bottomrule
+\end{tabular}
+\caption{MOTIF / IMDb / Movie-Year (20-candidate link prediction). Preliminary fine-tuned checkpoint evaluation on the test split; 834 queries. Checkpoint fine-tuned on physical/v1, selected by validation MRR. Tail-only ranking over the true year plus 19 fixed frequency-matched negative years per query. Tied scores use average rank. Values are estimates plus/minus bootstrap standard error from 1000 query resamples.}
+\label{tab:motif-movie_year-link_prediction}
+\end{table}

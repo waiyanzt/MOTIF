@@ -55,6 +55,37 @@ def point_metrics(scores, positives, pool, full_scores):
     return result
 
 
+def binary_metrics(scores, candidates, positives):
+    """Lab METRICS.md 3.3: every (query, candidate) pair is a binary instance predicted
+    positive at sigmoid(logit) >= 0.5; Precision/Recall are pooled over all pairs."""
+    scores, candidates = np.asarray(scores), np.asarray(candidates)
+    labels = candidates == np.asarray(positives)[:, 1:2]
+    if not np.array_equal(labels.sum(1), np.ones(len(labels))) or not labels[:, 0].all():
+        raise ValueError("Each query needs exactly one positive candidate, in column 0")
+    predicted = scores >= 0
+    tp = int((predicted & labels).sum())
+    fp, fn = int((predicted & ~labels).sum()), int((~predicted & labels).sum())
+    return {"precision": tp / (tp + fp) if tp + fp else 0.0, "recall": tp / (tp + fn) if tp + fn else 0.0}
+
+
+def mean_tau_b(a, b):
+    """Lab METRICS.md 4.1: per-query tau_b averaged over queries where it is defined;
+    identical vectors count as 1. Returns (mean, number of excluded queries)."""
+    values, undefined = [], 0
+    for x, y in zip(a, b):
+        if np.array_equal(x, y):
+            values.append(1.0)
+            continue
+        value = float(kendalltau(x, y, variant="b").statistic) if np.ptp(x) and np.ptp(y) else np.nan
+        if np.isfinite(value):
+            values.append(value)
+        else:
+            undefined += 1
+    if not values:
+        raise ValueError("Kendall tau-b is undefined for every query")
+    return float(np.mean(values)), undefined
+
+
 def estimate(point, draws):
     """Bootstrap SD estimates the standard error of the fixed-test-set statistic."""
     if not draws:
