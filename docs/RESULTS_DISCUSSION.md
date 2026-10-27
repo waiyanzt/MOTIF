@@ -230,6 +230,34 @@ used the official train split only.)
   on these kernels is not bitwise deterministic, but the 3-seed means agree within .002
   (v1 .5148 vs .5163; v2 .3967 vs .3964).
 
+## 6b. IMDb node classification (genre: Action / Comedy / Drama; v1–v4 as in Movie–Year)
+
+There is **no CMPNN baseline** for node classification; the rows compare against the lab's
+RGCN and SlotGAT ("original" arm, `IMDB_nc.tex`). MOTIF classifies by link prediction to one
+node per genre. Only **training** movies are linked to their genre, so MOTIF sees training
+labels as graph edges and uses no node features. The baselines use plot-keyword features
+and never see neighbours' labels, so this comparison is **not like-for-like**.
+
+| Accuracy | v1 | v2 | v3 | v4 | Spread | τ (mean of 6) |
+|---|---|---|---|---|---|---|
+| prior (most common genre) | .354 | | | | | |
+| co-director/co-actor genre vote | .584 (v1 graph) | | | | | |
+| RGCN | .652 | .603 | .649 | .618 | .048 | .784 |
+| SlotGAT | .654 | .663 | .656 | .647 | .016 | .764 |
+| MOTIF (ZS) | .610 | **.357** | .505 | .548 | .253 | .557 |
+| MOTIF (FT) | .609 | .592 | .605 | .603 | **.017** | **.830** (seed floor .85–.92) |
+
+* **Fine-tuned MOTIF reaches 0.59–0.61 without any node features**, about 0.05 below the
+  feature-based baselines and slightly above the genre-vote heuristic. Most of its signal is
+  "the genres of this movie's collaborators' other films".
+* **Fine-tuned MOTIF is the most invariant model here.** Its accuracy spread (.017) matches
+  SlotGAT's, and its τ (.83) is above both baselines and close to its own seed floor.
+* **Here fine-tuning *increases* invariance**, the opposite of link prediction. Zero-shot is
+  good only when director and actor are attached to the movie (v1 .610). When both sit on the
+  link node (v2) it collapses to the prior (.357). Fine-tuning teaches each copy to reach
+  through the link node.
+* With 3 classes, per-movie τ takes only four values, so it is a coarse statistic.
+
 ---
 
 ## 7. Caveats and threats to validity

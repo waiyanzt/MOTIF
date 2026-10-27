@@ -1,0 +1,62 @@
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{||l||l||c||}
+\hline
+\textbf{Method} & \textbf{Comparison} & \textbf{Kendall-$\tau$} \\
+\hline\hline
+RGCN & v1 vs v2 & $0.7350 \pm 0.0779$ \\
+\hline
+RGCN & v1 vs v3 & $0.8740 \pm 0.0715$ \\
+\hline
+RGCN & v1 vs v4 & $0.8022 \pm 0.0746$ \\
+\hline
+RGCN & v2 vs v3 & $0.7344 \pm 0.0730$ \\
+\hline
+RGCN & v2 vs v4 & $0.8227 \pm 0.0674$ \\
+\hline
+RGCN & v3 vs v4 & $0.7379 \pm 0.0261$ \\
+\hline
+\hline
+SlotGAT & v1 vs v2 & $0.8123 \pm 0.0401$ \\
+\hline
+SlotGAT & v1 vs v3 & $0.7879 \pm 0.0192$ \\
+\hline
+SlotGAT & v1 vs v4 & $0.7554 \pm 0.0104$ \\
+\hline
+SlotGAT & v2 vs v3 & $0.7326 \pm 0.0416$ \\
+\hline
+SlotGAT & v2 vs v4 & $0.7576 \pm 0.0615$ \\
+\hline
+SlotGAT & v3 vs v4 & $0.7374 \pm 0.0518$ \\
+\hline
+\hline
+MOTIF (ZS) & v1 vs v2 & $0.3509 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v1 vs v3 & $0.4928 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v1 vs v4 & $0.8086 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v2 vs v3 & $0.7273 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v2 vs v4 & $0.4737 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v3 vs v4 & $0.4912 \pm 0.0000$ \\
+\hline
+\hline
+MOTIF (FT) & v1 vs v2 & $0.8658 \pm 0.0112$ \\
+\hline
+MOTIF (FT) & v1 vs v3 & $0.8017 \pm 0.0232$ \\
+\hline
+MOTIF (FT) & v1 vs v4 & $0.8464 \pm 0.0596$ \\
+\hline
+MOTIF (FT) & v2 vs v3 & $0.7860 \pm 0.0388$ \\
+\hline
+MOTIF (FT) & v2 vs v4 & $0.8339 \pm 0.0393$ \\
+\hline
+MOTIF (FT) & v3 vs v4 & $0.8437 \pm 0.0103$ \\
+\hline
+\end{tabular}
+\caption{IMDb Kendall-$\tau_b$ between the class scores of two variants' models for the same test node, averaged over nodes. Mean $\pm$ population std over training seeds (20241017, 20251017, 1566911444); zero-shot has no training seed (std 0). }
+\label{tab:nc_imdb_seed_invariance}
+\end{table}

@@ -93,7 +93,30 @@ python script/report_seeds.py --dataset wordnet \
   --baseline-tex ../SCR/INV-GNN-12D9/docs/results/WN18RR_lp.tex
 ```
 
-## 5. Overleaf
+## 5. Node classification (IMDb genre, Freebase BOOK)
+
+`script/nc_motif.py` turns classification into link prediction to one node per class. Only
+training nodes get a `node_to_class` edge, and validation/test nodes are checked to have none.
+The labels, splits and variants are the lab's own (see the script docstring). There is no
+CMPNN baseline, so the tables use the lab's NC baselines.
+
+```bash
+# IMDb: build the lab's NC bundles, export, run (V100)
+python ../SCR/INV-GNN-12D9/models/RGCN/preprocess_IMDB_rgcn_structural.py --tasks nc \
+  --variants v1,v2,v3,v4 --raw-csv ../SCR/rai-datasets/IMDB/movie_metadata.csv \
+  --out-root rai-datasets/preprocessed/_build/IMDB_nc
+python script/nc_motif.py export --dataset imdb --bundle-root rai-datasets/preprocessed/_build/IMDB_nc/IMDB/nc
+sbatch --array=0-3  --export=ALL,DATASET=imdb,MODE=eval,RUN_TAG=full slurm/nc.sbatch
+sbatch --array=0-11 --export=ALL,DATASET=imdb,MODE=finetune,RUN_TAG=seeds slurm/nc.sbatch
+python script/report_seeds.py --dataset nc_imdb --zeroshot results/motif_zeroshot_nc_imdb_full \
+  --finetune results/motif_finetuned_nc_imdb_seeds_s* \
+  --baseline-tex ../SCR/INV-GNN-12D9/docs/results/IMDB_nc.tex --baseline RGCN SlotGAT
+
+# Freebase: CPU export (parses the 7.9 GB exact_3 link.dat), then H200 runs
+sbatch --export=ALL,DATASET=freebase slurm/nc_export.sbatch
+```
+
+## 6. Overleaf
 
 `results/overleaf/motif_seed_tables/main.tex` is a standalone file that collects every
 `seed_summary_*` table. Upload that single file to Overleaf.

@@ -1,0 +1,46 @@
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{||l||l||c|c|c||c|c||}
+\hline
+\textbf{Method} & \textbf{Variant} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{Micro-F1} & \textbf{Macro-F1} \\
+\hline\hline
+RGCN & v1 & $0.6515 \pm 0.0171$ & $0.6554 \pm 0.0169$ & $0.6507 \pm 0.0182$ & $0.6515 \pm 0.0171$ & $0.6518 \pm 0.0175$ \\
+\hline
+RGCN & v2 & $0.6033 \pm 0.0030$ & $0.6089 \pm 0.0064$ & $0.6000 \pm 0.0022$ & $0.6033 \pm 0.0030$ & $0.6018 \pm 0.0028$ \\
+\hline
+RGCN & v3 & $0.6491 \pm 0.0157$ & $0.6578 \pm 0.0123$ & $0.6465 \pm 0.0187$ & $0.6491 \pm 0.0157$ & $0.6492 \pm 0.0171$ \\
+\hline
+RGCN & v4 & $0.6180 \pm 0.0089$ & $0.6225 \pm 0.0103$ & $0.6156 \pm 0.0102$ & $0.6180 \pm 0.0089$ & $0.6164 \pm 0.0091$ \\
+\hline
+\hline
+SlotGAT & v1 & $0.6535 \pm 0.0065$ & $0.6602 \pm 0.0095$ & $0.6516 \pm 0.0042$ & $0.6535 \pm 0.0065$ & $0.6543 \pm 0.0058$ \\
+\hline
+SlotGAT & v2 & $0.6627 \pm 0.0068$ & $0.6701 \pm 0.0040$ & $0.6612 \pm 0.0086$ & $0.6627 \pm 0.0068$ & $0.6639 \pm 0.0071$ \\
+\hline
+SlotGAT & v3 & $0.6559 \pm 0.0057$ & $0.6584 \pm 0.0063$ & $0.6601 \pm 0.0063$ & $0.6559 \pm 0.0057$ & $0.6580 \pm 0.0058$ \\
+\hline
+SlotGAT & v4 & $0.6467 \pm 0.0041$ & $0.6501 \pm 0.0014$ & $0.6482 \pm 0.0023$ & $0.6467 \pm 0.0041$ & $0.6476 \pm 0.0030$ \\
+\hline
+\hline
+MOTIF (ZS) & v1 & $0.6100 \pm 0.0000$ & $0.6272 \pm 0.0000$ & $0.6049 \pm 0.0000$ & $0.6100 \pm 0.0000$ & $0.6076 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v2 & $0.3565 \pm 0.0000$ & $0.4433 \pm 0.0000$ & $0.3359 \pm 0.0000$ & $0.3565 \pm 0.0000$ & $0.2388 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v3 & $0.5048 \pm 0.0000$ & $0.5896 \pm 0.0000$ & $0.4824 \pm 0.0000$ & $0.5048 \pm 0.0000$ & $0.4522 \pm 0.0000$ \\
+\hline
+MOTIF (ZS) & v4 & $0.5478 \pm 0.0000$ & $0.5849 \pm 0.0000$ & $0.5356 \pm 0.0000$ & $0.5478 \pm 0.0000$ & $0.5340 \pm 0.0000$ \\
+\hline
+\hline
+MOTIF (FT) & v1 & $0.6089 \pm 0.0026$ & $0.6216 \pm 0.0049$ & $0.6035 \pm 0.0013$ & $0.6089 \pm 0.0026$ & $0.6074 \pm 0.0012$ \\
+\hline
+MOTIF (FT) & v2 & $0.5921 \pm 0.0026$ & $0.5998 \pm 0.0020$ & $0.5876 \pm 0.0046$ & $0.5921 \pm 0.0026$ & $0.5894 \pm 0.0040$ \\
+\hline
+MOTIF (FT) & v3 & $0.6053 \pm 0.0051$ & $0.6160 \pm 0.0048$ & $0.6021 \pm 0.0053$ & $0.6053 \pm 0.0051$ & $0.6059 \pm 0.0053$ \\
+\hline
+MOTIF (FT) & v4 & $0.6025 \pm 0.0069$ & $0.6134 \pm 0.0035$ & $0.5975 \pm 0.0096$ & $0.6025 \pm 0.0069$ & $0.6008 \pm 0.0091$ \\
+\hline
+\end{tabular}
+\caption{IMDb node classification (macro Precision/Recall). MOTIF classifies by link prediction to one node per class; only training nodes are linked to their class, so it sees training labels as graph edges and no node features. Baselines (RGCN, SlotGAT: lab original arm) use plot-keyword features. Mean $\pm$ population std over training seeds (20241017, 20251017, 1566911444); zero-shot has no training seed (std 0). }
+\label{tab:nc_imdb_seed_performance}
+\end{table}
