@@ -1,0 +1,19 @@
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{||l||l||c||c||c||}
+\hline
+\textbf{Dataset} & \textbf{Method} & \textbf{Accuracy} & \textbf{$|\Delta|$ Accuracy} & \textbf{Kendall-$\tau$} \\
+\hline\hline
+IMDb genre & RGCN & $0.6305$ & $0.0293$ & $0.7844$ \\
+\hline
+IMDb genre & SlotGAT & $0.6547$ & $0.0084$ & $0.7639$ \\
+\hline
+IMDb genre & MOTIF (ZS) & $0.5048 \pm 0.0000$ & $0.1340$ & $0.5574 \pm 0.0000$ \\
+\hline
+IMDb genre & MOTIF (FT) & $0.6022 \pm 0.0029$ & $0.0088$ & $0.8296 \pm 0.0221$ \\
+\hline
+\end{tabular}
+\caption{Node classification: averages over all representation variants per dataset. Averages and Kendall-$\tau$ for MOTIF are taken within each training seed, then mean $\pm$ population std over the three seeds; ZS/PT is a single frozen run. $|\Delta|$ is the mean absolute difference between the per-variant means over all variant pairs, computed the same way for every method (no $\pm$). Baseline rows are exact averages of the lab's per-variant means, whose per-seed values are unavailable, so they carry no $\pm$. Kendall-$\tau$ is the mean over all variant pairs. There is no CMPNN NC baseline; baselines use node features, MOTIF uses training labels as edges.}
+\label{tab:overview_nc}
+\end{table}

@@ -116,7 +116,19 @@ python script/report_seeds.py --dataset nc_imdb --zeroshot results/motif_zerosho
 sbatch --export=ALL,DATASET=freebase slurm/nc_export.sbatch
 ```
 
-## 6. Overleaf
+## 6. Overview table (averages over all variants)
+
+```bash
+python script/report_overview.py   # reads every results/seed_summary_*/summary.json
+```
+
+It writes `results/seed_summary_overview/overview_{lp,nc}.tex` with one row per dataset and
+method. The columns are the average metric over variants (MRR and Hits@1 for link prediction,
+accuracy for node classification), the average |difference| between variants (computed from
+the variant means, the same way for every method), and the average Kendall-τ over variant
+pairs. Rerun it after adding any `seed_summary_*` folder.
+
+## 7. Overleaf
 
 `results/overleaf/motif_seed_tables/main.tex` is a standalone file that collects every
 `seed_summary_*` table. Upload that single file to Overleaf.
