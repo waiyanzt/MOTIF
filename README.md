@@ -42,6 +42,9 @@ For four-variant IMDb training, the full train/test transfer matrix and fine-tun
 see the [IMDb fine-tuning runbook](docs/IMDB_FINE_TUNING.md).
 For the seed-averaged MOTIF (ZS)/(FT) tables with CMPNN baseline rows, see
 [seed tables](docs/SEED_TABLES.md).
+Node classification with MOTIF (classes as nodes) is explained in
+[node classification](docs/NODE_CLASSIFICATION.md); results are discussed in
+[results discussion](docs/RESULTS_DISCUSSION.md).
 For the three-variant DBLP Paper-Conference experiment and its three tables,
 see the [DBLP fine-tuning runbook](docs/DBLP_FINE_TUNING.md).
 
