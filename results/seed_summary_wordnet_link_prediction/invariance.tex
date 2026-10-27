@@ -1,0 +1,31 @@
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{||l||l||c||}
+\hline
+\textbf{Method} & \textbf{Comparison} & \textbf{Kendall-$\tau$} \\
+\hline\hline
+CMPNN & v1 vs v2 & $-0.0706 \pm 0.0827$ \\
+\hline
+CMPNN & v1 vs v3 & $0.1974 \pm 0.0362$ \\
+\hline
+CMPNN & v2 vs v3 & $-0.0399 \pm 0.1129$ \\
+\hline
+\hline
+MOTIF (PT) & v1 vs v2 & $0.5272 \pm 0.0012$ \\
+\hline
+MOTIF (PT) & v1 vs v3 & $0.2753 \pm 0.0011$ \\
+\hline
+MOTIF (PT) & v2 vs v3 & $0.2677 \pm 0.0010$ \\
+\hline
+\hline
+MOTIF (FT) & v1 vs v2 & $0.4119 \pm 0.0119$ \\
+\hline
+MOTIF (FT) & v1 vs v3 & $0.1621 \pm 0.0485$ \\
+\hline
+MOTIF (FT) & v2 vs v3 & $0.2183 \pm 0.0759$ \\
+\hline
+\end{tabular}
+\caption{WN18RR Kendall-$\tau_b$ between candidate rankings of two variants' models on the same queries, averaged over queries. Mean $\pm$ population std over training seeds (20241017, 20251017, 1566911444); MOTIF (PT) is the released checkpoint, which was pretrained on WN18RR (v1's graph), so it is not zero-shot; its spread is over the three seeds' candidate draws (ranking metrics are exact). MOTIF ran on one H200, CMPNN on V100. }
+\label{tab:wordnet_link_prediction_seed_invariance}
+\end{table}

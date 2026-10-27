@@ -202,4 +202,68 @@ MOTIF (FT) & v2 vs v3 & $0.8055 \pm 0.0511$ \\
 \label{tab:dblp_paper_conference_seed_invariance}
 \end{table}
 
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{||l||l||c|c|c||c|c||}
+\hline
+\textbf{Method} & \textbf{Variant} & \textbf{MRR} & \textbf{Hits@1} & \textbf{Hits@3} & \textbf{Precision} & \textbf{Recall} \\
+\hline\hline
+CMPNN & v1 & $0.4238 \pm 0.0095$ & $0.3680 \pm 0.0105$ & $0.4418 \pm 0.0107$ & $0.1397 \pm 0.0022$ & $0.9399 \pm 0.0026$ \\
+\hline
+CMPNN & v2 & $0.3075 \pm 0.0559$ & $0.2879 \pm 0.0697$ & $0.3125 \pm 0.0538$ & $0.9426 \pm 0.0647$ & $0.3009 \pm 0.0749$ \\
+\hline
+CMPNN & v3 & $0.2927 \pm 0.0306$ & $0.2186 \pm 0.0281$ & $0.3300 \pm 0.0319$ & $0.4584 \pm 0.0437$ & $0.6406 \pm 0.0259$ \\
+\hline
+\hline
+MOTIF (PT) & v1 & $0.5199 \pm 0.0000$ & $0.4681 \pm 0.0000$ & $0.5384 \pm 0.0000$ & $0.4331 \pm 0.0027$ & $0.8572 \pm 0.0000$ \\
+\hline
+MOTIF (PT) & v2 & $0.1450 \pm 0.0000$ & $0.0769 \pm 0.0000$ & $0.1362 \pm 0.0000$ & $0.7286 \pm 0.0034$ & $0.6153 \pm 0.0000$ \\
+\hline
+MOTIF (PT) & v3 & $0.3812 \pm 0.0000$ & $0.3553 \pm 0.0000$ & $0.3803 \pm 0.0000$ & $0.8479 \pm 0.0085$ & $0.4911 \pm 0.0000$ \\
+\hline
+\hline
+MOTIF (FT) & v1 & $0.5163 \pm 0.0016$ & $0.4639 \pm 0.0010$ & $0.5353 \pm 0.0023$ & $0.4628 \pm 0.0504$ & $0.8291 \pm 0.0141$ \\
+\hline
+MOTIF (FT) & v2 & $0.3964 \pm 0.0096$ & $0.3601 \pm 0.0072$ & $0.4012 \pm 0.0149$ & $0.9914 \pm 0.0029$ & $0.3479 \pm 0.0008$ \\
+\hline
+MOTIF (FT) & v3 & $0.4302 \pm 0.0031$ & $0.3918 \pm 0.0022$ & $0.4384 \pm 0.0032$ & $0.9409 \pm 0.0146$ & $0.5200 \pm 0.0282$ \\
+\hline
+\end{tabular}
+\caption{WN18RR link prediction. MRR and Hits use filtered ranking over all 40,943 entities, head and tail queries; Precision/Recall use the positive plus 100 seeded candidates per query, positive at $\sigma(s) \geq 0.5$. Mean $\pm$ population std over training seeds (20241017, 20251017, 1566911444); MOTIF (PT) is the released checkpoint, which was pretrained on WN18RR (v1's graph), so it is not zero-shot; its spread is over the three seeds' candidate draws (ranking metrics are exact). MOTIF ran on one H200, CMPNN on V100. }
+\label{tab:wordnet_link_prediction_seed_performance}
+\end{table}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{||l||l||c||}
+\hline
+\textbf{Method} & \textbf{Comparison} & \textbf{Kendall-$\tau$} \\
+\hline\hline
+CMPNN & v1 vs v2 & $-0.0706 \pm 0.0827$ \\
+\hline
+CMPNN & v1 vs v3 & $0.1974 \pm 0.0362$ \\
+\hline
+CMPNN & v2 vs v3 & $-0.0399 \pm 0.1129$ \\
+\hline
+\hline
+MOTIF (PT) & v1 vs v2 & $0.5272 \pm 0.0012$ \\
+\hline
+MOTIF (PT) & v1 vs v3 & $0.2753 \pm 0.0011$ \\
+\hline
+MOTIF (PT) & v2 vs v3 & $0.2677 \pm 0.0010$ \\
+\hline
+\hline
+MOTIF (FT) & v1 vs v2 & $0.4119 \pm 0.0119$ \\
+\hline
+MOTIF (FT) & v1 vs v3 & $0.1621 \pm 0.0485$ \\
+\hline
+MOTIF (FT) & v2 vs v3 & $0.2183 \pm 0.0759$ \\
+\hline
+\end{tabular}
+\caption{WN18RR Kendall-$\tau_b$ between candidate rankings of two variants' models on the same queries, averaged over queries. Mean $\pm$ population std over training seeds (20241017, 20251017, 1566911444); MOTIF (PT) is the released checkpoint, which was pretrained on WN18RR (v1's graph), so it is not zero-shot; its spread is over the three seeds' candidate draws (ranking metrics are exact). MOTIF ran on one H200, CMPNN on V100. }
+\label{tab:wordnet_link_prediction_seed_invariance}
+\end{table}
+
 \end{document}

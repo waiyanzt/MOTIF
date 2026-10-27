@@ -180,7 +180,9 @@ def write_outputs(summary, output):
     tau_groups = [(name, block["invariance"]) for name, block in summary["methods"].items()]
     seeds = summary["finetune_seeds"]
     wordnet = dataset == "wordnet"
-    zeroshot_note = ("zero-shot spread is over the three seeds' candidate draws (ranking metrics are exact). "
+    zeroshot_note = ("MOTIF (PT) is the released checkpoint, which was pretrained on WN18RR (v1's graph), so it is not "
+                     "zero-shot; its spread is over the three seeds' candidate draws (ranking metrics are exact). "
+                     "MOTIF ran on one H200, CMPNN on V100. "
                      if wordnet else "zero-shot has no training seed (std 0). ")
     note = (f"Mean $\\pm$ population std over training seeds ({', '.join(map(str, seeds))}); "
             + zeroshot_note) if seeds else "Zero-shot only. "
@@ -237,7 +239,8 @@ def main():
         zeroshot = (wordnet_runs([args.zeroshot], variants, zeroshot=True) if wordnet else
                     {"zero-shot": {v: load_scores(args.zeroshot / task / "physical" / v / "scores.npz")
                                    for v in variants}})
-        sources.append(("MOTIF (ZS)", zeroshot))
+        # The released checkpoint was pretrained on WN18RR, so its frozen rows are not zero-shot there.
+        sources.append(("MOTIF (PT)" if wordnet else "MOTIF (ZS)", zeroshot))
     finetuned = ((wordnet_runs(args.finetune, variants) if wordnet else
                   finetuned_runs(args.finetune, args.dataset, task, variants)) if args.finetune else {})
     if finetuned:

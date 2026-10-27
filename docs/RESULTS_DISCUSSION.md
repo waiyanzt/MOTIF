@@ -1,7 +1,7 @@
 # Results discussion: MOTIF vs CMPNN across representation variants
 
 Working notes on the tables in `results/overleaf/motif_seed_tables/main.tex` (state as of
-2026-10-27). WN18RR is still running; section 6 gives preliminary numbers only.
+2026-10-27). All four tasks with a CMPNN baseline are complete.
 
 ---
 
@@ -64,13 +64,24 @@ what the model learns. (No seed floor is available for CMPNN; see section 7.)
    Movie–Year, and only 0.83 vs 0.78 on Movie–Director. Part of this gap is the frozen
    model's missing training variance (see above). Zero-shot MRR is lower than CMPNN on
    every task.
-2. **Fine-tuning closes the accuracy gap and sometimes beats CMPNN.** MOTIF (FT) is within
-   0.01 on DBLP, ties or beats it on Movie–Director, and is the only model above chance on
-   Movie–Year.
-3. **Fine-tuning separately on each variant spends most of the zero-shot invariance**,
-   bringing τ down to CMPNN's level. On DBLP and Movie–Director, though, the remaining
-   cross-variant disagreement is at or near the **seed floor**: it comes from training
-   noise, not the representation. On Movie–Year it is clearly below the floor.
+2. **Fine-tuning closes the accuracy gap and often beats CMPNN.** MOTIF (FT) is within
+   0.01 on DBLP, ties or beats it on Movie–Director, is the only model above chance on
+   Movie–Year, and **beats CMPNN on all three WN18RR variants** (+.09 to +.14 MRR; MOTIF was
+   pretrained on WN18RR).
+3. **Fine-tuning makes MOTIF *less* invariant, not more.** Each variant gets its own
+   fine-tuned copy, so the copies drift apart:
+
+   | τ (mean over pairs) | ZS / PT | FT | Change | CMPNN | FT seed floor |
+   |---|---|---|---|---|---|
+   | DBLP | .956 | .841 | −.115 | .742 | .83–.90 |
+   | Movie–Director | .834 | .782 | −.052 | .782 | .82–.83 |
+   | Movie–Year | .737 | .235 | −.502 | .139 | .39–.55 |
+   | WN18RR | .357 | .264 | −.093 | .029 | .48–.67 |
+
+   On DBLP and Movie–Director, the remaining disagreement is at or near the **seed floor**,
+   so it comes from training noise, not the representation. On Movie–Year and WN18RR it is
+   clearly below the floor, so the representation does change what is learned. In every case
+   fine-tuned MOTIF ends at or above CMPNN's τ.
 4. **Rank invariance and accuracy invariance are different properties.** On DBLP, MOTIF
    ranks more consistently than CMPNN, yet its MRR varies *more* across variants. On
    Movie–Director the reverse holds: fine-tuned MOTIF's MRR is nearly flat across variants,
@@ -140,7 +151,17 @@ what the model learns. (No seed floor is available for CMPNN; see section 7.)
 | MOTIF (FT) | **.240** / .198 / .198 / **.231** | .217 | .235 (seed floor .39–.55) |
 
 * **This task is close to unlearnable from structure.** CMPNN sits exactly at chance on
-  every variant. Treat everything here as low-signal.
+  every variant. Treat everything here as low-signal. A check on the v1 graph shows why:
+  * The true year appears among the years of movies sharing an actor or director for
+    **34.3%** of test movies. A *wrong* candidate year appears there **35.3%** of the time,
+    so collaborators' exact years carry no information.
+  * Voting for collaborators' exact years scores MRR **.153**, below chance. The 19 wrong
+    candidates are drawn by year popularity with replacement (14.8 distinct per query), so
+    popular-year guesses get punished.
+  * Only a coarse **era** signal exists: voting for years within ±3 of collaborators'
+    years scores .224. The models see years as unordered nodes (nothing says 1995 is next
+    to 1996) and have no per-node embeddings, so they would have to infer era from
+    shared-actor structure. Fine-tuned MOTIF's .240 on v1 is about the era heuristic's level.
 * **Fine-tuned MOTIF is the only model above chance**, on v1 and v4 (+0.04–0.05 MRR,
   about 10× the seed std). It stays at chance on v2/v3. The variants where it learns are
   the two where the **actor is attached to the movie** (v1 and v4, by the IMDb placement
@@ -157,38 +178,57 @@ what the model learns. (No seed floor is available for CMPNN; see section 7.)
   task where the representation, not seed noise, drives the disagreement.
 * **Ignore Precision and Recall for this task.** Precision is about 0.05 (the base rate)
   for everyone, and Recall std reaches ±0.47.
+* **Compared with Movie–Director:** both are IMDb link-prediction tasks with the same
+  candidate protocol, but Movie–Director is learnable (directors repeatedly work with the same
+  actors: co-actor heuristic .350, both models well above the .180 chance level), while
+  Movie–Year is not. Movie–Director is therefore the more informative IMDb task for the
+  MOTIF vs CMPNN comparison, and Movie–Year's τ values carry little meaning.
 
-## 6. WN18RR (in progress; v1 = no_changes, v2 = all_inverse_edges, v3 = transitive_edges)
+## 6. WN18RR (v1 = no_changes, v2 = all_inverse_edges, v3 = transitive_edges)
 
-All final WN18RR runs use one H200. **Status (2026-10-27):** v3 zero-shot is done; v3
-fine-tuning is running (about 1 h 20 min per seed); the v1/v2 reruns are queued for the H200.
-The v1/v2 numbers below are the earlier V100 runs (archived in
-`results/archive_wordnet_v1v2_v100/`), which should match the H200 reruns to about 4 decimals.
-This section and the `main.tex` tables will be updated when every H200 run is finished.
+All MOTIF WN18RR runs use one H200; CMPNN ran on V100. The frozen rows are labelled
+**MOTIF (PT)**, not ZS, because `motif_3g.pth` was **pretrained on WN18RR**, on exactly v1's
+training graph. They are in-domain, not zero-shot. (No test answers were seen: the pretraining
+used the official train split only.)
 
-| MRR | v1 | v2 | v3 |
+| MRR | v1 | v2 | v3 | Mean | Spread |
+|---|---|---|---|---|---|
+| CMPNN | .424 ± .010 | .308 ± .056 | .293 ± .031 | .341 | .131 |
+| MOTIF (PT) | .520 | **.145** | .381 | .349 | .375 |
+| MOTIF (FT) | **.516 ± .002** | **.396 ± .010** | **.430 ± .003** | **.448** | .120 |
+
+| Kendall-τ | v1 vs v2 | v1 vs v3 | v2 vs v3 |
 |---|---|---|---|
-| CMPNN | .424 ± .010 | .308 ± .056 | .293 ± .031 |
-| MOTIF (pretrained) | .520 (V100) | **.145** (V100) | **.381** (H200) |
-| MOTIF (FT, 3 seeds) | .509 / .515 / .521 (V100) | .384 / .397 / .407 (V100) | running |
+| CMPNN | −.071 | .197 | −.040 |
+| MOTIF (PT) | .527 | .275 | .268 |
+| MOTIF (FT) | .412 | .162 | .218 |
+| FT seed floor (same variant, different seeds) | v1 .67 · v2 .58 · v3 .48 | | |
 
-* **v3 (transitive shortcuts, 537 relations):** pretrained MOTIF drops from .520 to .381.
-  That is still well above CMPNN on v3 (.293), but a large loss for a graph that only *adds*
-  edges derived from training facts. Together with v2, this shows the pretrained relation
-  encoder is sensitive to extra relation types, even when they are redundant.
-
-* **MOTIF's "zero-shot" is not zero-shot here.** `motif_3g.pth` was pretrained on WN18RR,
-  on the very graph that v1 is. The v1 advantage over CMPNN (.52 vs .42) is expected and
-  should not be claimed as transfer. The tables will label it accordingly.
-* **The striking number is v2.** Adding an explicit inverse edge for every training triple
-  drops pretrained MOTIF from .520 to **.145**, even though the graph carries the same
-  information. MOTIF already adds its own inverse relations internally, so v2 gives every
-  edge two "reverse" relations. The relation-motif graph changes a lot (18.7k → 144.7k
-  hyperedges), and the pretrained relation encoder apparently does not cope with that.
-  This is the clearest representation-sensitivity result so far.
-* **Fine-tuning recovers v2 to .397** (CMPNN .308). In fine-tuning, only the exact batch
-  edges are removed, matching CMPNN, so on v2 the explicit inverse of a training target
-  stays visible during training. This shortcut affects both models equally.
+* **Fine-tuned MOTIF beats CMPNN on every variant**, by +.09 (v1), +.09 (v2) and +.14 (v3) MRR,
+  with much smaller seed std. This is the largest and most consistent MOTIF advantage in the
+  study. It is not surprising for v1 (pretrained on this graph), but it holds on the
+  transformed variants too.
+* **Pretrained MOTIF is strongly representation-sensitive here.** It drops from .520 (v1) to
+  .145 when every edge gets an explicit inverse (v2), and to .381 when 3-hop shortcut
+  relations are added (v3). Both variants only add *redundant* information derived from
+  training facts. The likely cause is MOTIF's relation encoder: v2 duplicates every relation
+  in reverse on top of MOTIF's own internal inverses, and v3 adds 526 new relation types.
+  The relation-motif graph grows from 18.7k hyperedges (v1) to 144.7k (v2) and 50.5M (v3).
+  Fine-tuning recovers most of the loss.
+* **Invariance is low for every model on WN18RR**, and the numbers need care:
+  * The τ candidates are 100 *random* entities per query, as in CMPNN's protocol. Most of
+    them are irrelevant, so τ is dominated by how a model orders junk candidates. That is
+    why even same-variant reseeding gives only τ .48–.67.
+  * MOTIF (FT) cross-variant τ (.16–.41) is **below** its seed floor (.48–.67), so the
+    representation genuinely changes what is learned.
+  * MOTIF (FT) is still clearly more invariant than CMPNN, whose τ is ≈ 0 or negative on two
+    pairs.
+* **Accuracy spread:** fine-tuned MOTIF varies .12 across variants, about the same as CMPNN
+  (.13), at a much higher level.
+* **GPU check:** the H200 reruns of v1 and v2 match the earlier V100 runs exactly for the
+  frozen model (MRR .5199 on both). Fine-tuned seeds differ by up to .01, because training
+  on these kernels is not bitwise deterministic, but the 3-seed means agree within .002
+  (v1 .5148 vs .5163; v2 .3967 vs .3964).
 
 ---
 
