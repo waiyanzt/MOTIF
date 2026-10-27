@@ -1,0 +1,22 @@
+% Requires adjustbox.
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{5pt}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{|l|l|l|l|l|l|l|}
+\hline
+\textbf{Dataset} & \textbf{Method} & \textbf{Variant} & \textbf{MRR} & \textbf{Hits@1} & \textbf{Hits@3} & \textbf{Hits@10} \\
+\hline
+DBLP & MOTIF & v1 & $0.5810 \pm 0.0067$ & $0.3886 \pm 0.0093$ & $0.7243 \pm 0.0082$ & $0.9370 \pm 0.0050$ \\
+\hline
+DBLP & MOTIF & v2 & $0.5696 \pm 0.0069$ & $0.3800 \pm 0.0094$ & $0.7052 \pm 0.0084$ & $0.9280 \pm 0.0052$ \\
+\hline
+DBLP & MOTIF & v3 & $0.5727 \pm 0.0068$ & $0.3830 \pm 0.0092$ & $0.7089 \pm 0.0083$ & $0.9351 \pm 0.0050$ \\
+\hline
+\end{tabular}
+\end{adjustbox}
+\caption{Preliminary zero-shot MOTIF results on DBLP Paper--Conference; 2,666 test queries. Tail-only link prediction over the original 20 candidates; score ties use average rank. Values are estimates $\pm$ bootstrap standard error (1,000 query resamples).}
+\label{tab:motif-dblp-paper-conference-link_prediction}
+\end{table}

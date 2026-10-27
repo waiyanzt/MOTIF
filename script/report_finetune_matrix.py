@@ -8,8 +8,8 @@ from pathlib import Path
 
 import numpy as np
 
-from export_overleaf import matrix_tables
-from lp_data import TASK_VARIANTS, write_json
+from export_overleaf import CLASS_COLUMNS, LEGACY_MATRIX_TABLES, LP_COLUMNS, matrix_tables
+from lp_data import TASK_VARIANTS, DBLP_TASK_VARIANTS, write_json
 from lp_metrics import check_alignment, compare_predictions
 from report_lp import build_report, cell, csv_row, write_csv
 from run_finetune_matrix import completed_cell, completed_training
@@ -24,21 +24,22 @@ def build_matrix_report(root, bootstrap=1000, seed=0):
     if manifest["format"] != "motif_finetune_matrix_experiment_v1":
         raise ValueError("Not a fine-tuning matrix experiment")
     contract = manifest["compute_contract"]
-    task, variants = contract["task"], contract["variants"]
-    if contract["dataset"] != "imdb" or variants != list(TASK_VARIANTS[task]):
+    dataset, task, variants = contract["dataset"], contract["task"], contract["variants"]
+    families = {"imdb": TASK_VARIANTS, "dblp": DBLP_TASK_VARIANTS}
+    if dataset not in families or variants != list(families[dataset][task]):
         raise ValueError("Matrix must contain the full physical variant family")
     cells, within_pairs, arrays, training_records = {}, {}, {}, {}
     shared_training = shared_evaluation = reference_arrays = None
     initial_parameters = schedule_hash = None
     for train in variants:
-        training_dir = (root.parent / f"motif_finetune_imdb_lp_{manifest['run_tag']}" / task /
+        training_dir = (root.parent / f"motif_finetune_{dataset}_lp_{manifest['run_tag']}" / task /
                         f"train_{train}" / f"seed{contract['seed']}")
         recorded_training = completed_training(training_dir, train, contract)
         if recorded_training != manifest["training"].get(train):
             raise ValueError(f"Training files differ from the matrix manifest: {training_dir}")
         training = read_json(training_dir / "training_summary.json")
         normalized = {key: value for key, value in training["training_contract"].items()
-                      if key not in ("train_variant", "train_graph_sha256")}
+                      if key not in ("train_variant", "train_graph_sha256", "area_support_sha256")}
         if shared_training is None:
             shared_training = normalized
             initial_parameters = training["initial_parameters_sha256"]
@@ -50,6 +51,10 @@ def build_matrix_report(root, bootstrap=1000, seed=0):
             **recorded_training, "selected_step": training["best_step"],
             "validation_mrr": training["best_validation_mrr"],
             "completed_steps": training["completed_steps"], "schedule_sha256": schedule_hash,
+            "total_seconds": training["total_seconds"], "peak_gpu_bytes": training["peak_gpu_bytes"],
+            "total_removed_training_edges": training["total_removed_training_edges"],
+            **{key: training[key] for key in ("total_removed_target_edges", "total_removed_context_edges")
+               if key in training},
         }
         evaluation_root = root.parent / manifest["evaluation_roots"][train]
         arrays[train] = {}
@@ -75,6 +80,11 @@ def build_matrix_report(root, bootstrap=1000, seed=0):
                 raise ValueError("Test queries, candidates, scoring settings, code or environment differ across matrix cells")
             with np.load(directory / "scores.npz") as source:
                 values = {key: source[key].copy() for key in source.files}
+            if dataset == "dblp" and (len(values["candidate_pool"]) != 20
+                    or values["scores"].shape[1] != 20 or values["full_type_scores"].shape[1] != 20
+                    or not np.array_equal(np.sort(values["candidates"], axis=1),
+                                          np.broadcast_to(values["candidate_pool"], values["candidates"].shape))):
+                raise ValueError("DBLP prediction and ranking metrics must use the same 20 conferences")
             if reference_arrays is None:
                 reference_arrays = values
             else:
@@ -93,7 +103,7 @@ def build_matrix_report(root, bootstrap=1000, seed=0):
     }
     summary = {
         "format": "motif_finetune_matrix_v1", "evaluation_stage": "finetuned_matrix",
-        "report_status": "preliminary", "dataset": "imdb", "task": task, "variants": variants,
+        "report_status": "preliminary", "dataset": dataset, "task": task, "variants": variants,
         "seed": contract["seed"], "split": "test", "bootstrap": bootstrap, "bootstrap_seed": seed,
         "uncertainty": "query_bootstrap_standard_error", "cells": cells,
         "diagonal_pairs": diagonal_pairs, "within_checkpoint_pairs": within_pairs,
@@ -108,47 +118,55 @@ def build_matrix_report(root, bootstrap=1000, seed=0):
         for test in variants:
             result = cells[train][test]
             performance.append(csv_row({
-                "model": "MOTIF (FT)", "dataset": "imdb", "task": task, "seed": contract["seed"],
+                "model": "MOTIF (FT)", "dataset": dataset, "task": task, "seed": contract["seed"],
                 "train_variant": train, "test_variant": test,
                 "regime": "C-a" if train == test else "C-b", "queries": result["num_queries"],
-            }, result["metrics"]))
+            }, {key: result["metrics"][key] for key, _ in LP_COLUMNS + (CLASS_COLUMNS if dataset == "dblp" else ())}))
     comparisons = []
     for regime, train, pairs in [("C-a", "independent", diagonal_pairs)] + [
-            ("fixed_checkpoint_transfer", train, within_pairs[train]) for train in variants]:
+            ("C-b", train, within_pairs[train]) for train in variants]:
         for pair, result in pairs.items():
             comparisons.append(csv_row({
-                "model": "MOTIF (FT)", "dataset": "imdb", "task": task, "seed": contract["seed"],
+                "model": "MOTIF (FT)", "dataset": dataset, "task": task, "seed": contract["seed"],
                 "regime": regime, "train_variant": train, "comparison": pair,
                 "queries": result["num_queries"], "undefined_tau_queries": result["undefined_tau_queries"],
-            }, result["metrics"]))
+            }, {key: value for key, value in result["metrics"].items() if key != "full_type_prediction_agreement"}))
     write_csv(output / "performance.csv", performance)
     write_csv(output / "comparisons.csv", comparisons)
+    for name in LEGACY_MATRIX_TABLES:
+        (output / name).unlink(missing_ok=True)
     for name, content in matrix_tables(summary, include_lp=True).items():
         (output / f"{name}.tex").write_text(content, encoding="utf-8")
     notes = [
         "# Preliminary MOTIF fine-tuning matrix", "",
-        f"Task: IMDb {task}; training seed {contract['seed']}; {contract['steps']} optimizer steps per variant.",
+        f"Task: {dataset.upper()} {task}; training seed {contract['seed']}; {contract['steps']} optimizer steps per variant.",
         "Each variant starts independently from the same released checkpoint; validation MRR selects its checkpoint.",
         "Diagonal cells are matched-variant adaptation (C-a); off-diagonal cells are cross-representation transfer (C-b).",
         (f"Values are estimates ± query-bootstrap standard error ({bootstrap} resamples), not training-seed variation."
          if bootstrap else "Values are point estimates; query-bootstrap uncertainty was not computed."),
-        "Classification uses the full target-type pool; link prediction uses the original 20 candidates.", "",
+        "All reported metrics use the original 20 candidates: the positive target plus 19 fixed negatives.",
+        "The guide's training-repeat noise floor and multi-seed mean/SD remain pending; this is a single-seed pilot.", "",
     ]
-    for metric, label in (("accuracy", "Accuracy"), ("macro_f1", "Macro-F1"), ("mrr", "MRR (20 candidates)")):
+    for metric, label in (("mrr", "MRR (20 candidates)"), ("hits@1", "Hits@1 (20 candidates)")):
         notes.extend([f"## {label}", "", "| Train / Test | " + " | ".join(variants) + " |",
                       "|---|" + "---:|" * len(variants)])
         notes.extend("| " + train + " | " + " | ".join(cell(cells[train][test]["metrics"][metric])
                                                        for test in variants) + " |" for train in variants)
         notes.append("")
-    notes.extend([
+    table_notes = (["`conference_prediction.tex` reports macro Precision/Recall/F1 for all nine cells; Accuracy and Micro-F1 equal Hits@1.",
+                    "`link_prediction.tex` reports MRR and Hits for the same nine cells."] if dataset == "dblp" else
+                   ["`transfer_performance.tex` contains the MRR/Hits@1/3/10 transfer matrix for all train/test cells."])
+    notes.extend(table_notes + [
         "`performance.csv` contains all train/test cells and all performance metrics.",
-        "`classification_diagonal.tex` shows the matched-variant baseline; `classification_all.tex` shows every cell.",
-        "`per_variant_comparisons.tex` compares the independently trained diagonal models: training and representation both vary.",
-        "`transfer_comparisons.tex` groups Agreement@1 and Kendall tau-b comparisons by fixed training checkpoint.",
-        "Both comparison columns use the same 20 candidates per query; classification metrics remain separate.",
+        "`invariance.tex` combines C-a comparisons between separately trained models and C-b fixed-checkpoint comparisons, labelled by regime.",
+        "All columns use the same 20 candidates per query; Delta MRR is the second test variant minus the first.",
         "`comparisons.csv` and `summary.json` retain the comparison statistics and confidence intervals.",
         "Package these saved tables with `script/export_overleaf.py`; no PDF is compiled by this reporter.", "",
     ])
+    if dataset == "dblp":
+        notes.extend(["DBLP exports three tables: `conference_prediction.tex` (macro Precision/Recall/F1),",
+                      "`link_prediction.tex` (MRR and Hits), and `invariance.tex` (C-a/C-b labelled comparisons).",
+                      "All three use the same 20-conference pool; no extra classification task or head is trained.", ""])
     (output / "report.md").write_text("\n".join(notes), encoding="utf-8")
     print(f"Wrote matrix tables: {output}")
     return summary

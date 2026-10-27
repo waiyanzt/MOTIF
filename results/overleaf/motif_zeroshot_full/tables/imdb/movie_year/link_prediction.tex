@@ -1,0 +1,24 @@
+% Requires adjustbox.
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{5pt}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{|l|l|l|l|l|l|l|}
+\hline
+\textbf{Dataset} & \textbf{Method} & \textbf{Variant} & \textbf{MRR} & \textbf{Hits@1} & \textbf{Hits@3} & \textbf{Hits@10} \\
+\hline
+IMDb & MOTIF & v1 & $0.1802 \pm 0.0082$ & $0.0624 \pm 0.0085$ & $0.1379 \pm 0.0120$ & $0.4580 \pm 0.0175$ \\
+\hline
+IMDb & MOTIF & v2 & $0.1901 \pm 0.0087$ & $0.0755 \pm 0.0093$ & $0.1487 \pm 0.0123$ & $0.4652 \pm 0.0175$ \\
+\hline
+IMDb & MOTIF & v3 & $0.1553 \pm 0.0068$ & $0.0396 \pm 0.0068$ & $0.1055 \pm 0.0107$ & $0.4436 \pm 0.0171$ \\
+\hline
+IMDb & MOTIF & v4 & $0.1984 \pm 0.0090$ & $0.0791 \pm 0.0094$ & $0.1667 \pm 0.0134$ & $0.4748 \pm 0.0174$ \\
+\hline
+\end{tabular}
+\end{adjustbox}
+\caption{Preliminary zero-shot MOTIF results on IMDb Movie--Year; 834 test queries. Tail-only link prediction over the original 20 candidates; score ties use average rank. Values are estimates $\pm$ bootstrap standard error (1,000 query resamples).}
+\label{tab:motif-imdb-movie-year-link_prediction}
+\end{table}

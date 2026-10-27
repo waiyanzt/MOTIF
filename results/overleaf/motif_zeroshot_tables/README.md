@@ -1,12 +1,13 @@
-# MOTIF Overleaf project
+# MOTIF guide-based Overleaf project
 
-Upload this ZIP as a new Overleaf project, with main.tex as the main document.
-Edit main.tex to choose which tables appear. Dataset/task folders keep filenames distinct.
+Upload the ZIP and compile main.tex on Overleaf.
+For an existing project, replace main.tex and upload tables/ with the same hierarchy.
+Old classification and duplicate fine-tuning table files may be deleted from Overleaf.
 
-The presentation copies include physical variants and their pairwise comparisons only.
-They retain the numbers and uncertainty from the saved reports; no metrics were recomputed.
+IMDb uses the correct target plus 19 fixed negative targets; DBLP ranks all 20 conferences.
+Zero-shot has one MRR/Hits table and one Agreement/Kendall tau/Delta MRR table per task.
 
 ## Source runs
 
-- IMDb / Movie-Year: `D:/AE/MOTIF/results/motif_zeroshot_imdb_lp_full`
-- DBLP / Paper-Conference: `D:/AE/MOTIF/results/motif_zeroshot_dblp_lp_full`
+- `results/motif_zeroshot_imdb_lp_full`
+- `results/motif_zeroshot_dblp_lp_full`

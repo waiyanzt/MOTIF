@@ -14,9 +14,8 @@ from lp_data import ROOT, TASK_VARIANTS, DBLP_TASK_VARIANTS, array_hash, file_ha
 from lp_metrics import check_alignment, compare_predictions, point_metrics, summarize_performance
 
 LP_COLUMNS = (("mrr", "MRR"), ("hits@1", "Hits@1"), ("hits@3", "Hits@3"), ("hits@10", "Hits@10"))
-CLASS_COLUMNS = (("accuracy", "Accuracy"), ("precision_macro", "Precision (macro)"),
-                 ("recall_macro", "Recall (macro)"), ("micro_f1", "Micro-F1"), ("macro_f1", "Macro-F1"))
-PAIR_COLUMNS = (("prediction_agreement", "Agreement@1"), ("tau_b", "Kendall $\\tau_b$"))
+PAIR_COLUMNS = (("prediction_agreement", "Agreement@1"), ("tau_b", "Kendall $\\tau_b$"),
+                ("delta_mrr", "$\\Delta$MRR"))
 TASK_LABELS = {"movie_year": "Movie-Year", "movie_director": "Movie-Director", "paper_conference": "Paper-Conference"}
 
 
@@ -73,10 +72,9 @@ def build_report(root, bootstrap=1000, seed=0):
     md = ["# Preliminary MOTIF evaluation", "",
           f"Uncertainty: estimate ± bootstrap SE; {bootstrap} query resamples, seed {seed}. Percentile 95% CIs are in JSON/CSV.",
           "LP uses each query's original positive + 19 fixed negatives, average ranks for ties.",
-          "Classification predicts the actual target entity over the full target-type pool; macro averages include every pool class, zero_division=0.",
-          "Micro-F1 equals accuracy in this single-label setting. Top-1 ties use the smallest global tail id.",
+          "All presentation metrics use the benchmark candidate sets specified in guide B2.",
           "Invariance uses the original 20 candidates. Identical score vectors have tau=1; undefined nonidentical constant-vector tau is assigned 0 and counted in JSON.", ""]
-    latex = {"link_prediction": [], "classification": [], "invariance": [], "controls": []}
+    latex = {"link_prediction": [], "invariance": [], "controls": []}
     for directory in sorted(p for p in root.iterdir() if p.is_dir() and (p / "physical").is_dir()):
         runs, contract, reference_arrays = {}, None, None
         for path in sorted(directory.glob("*/*/metrics.json")):
@@ -105,9 +103,7 @@ def build_report(root, bootstrap=1000, seed=0):
         stage = contract.get("evaluation_stage", "zeroshot")
         observed_stages.add(stage)
         title = f"MOTIF / {'IMDb' if dataset == 'imdb' else 'DBLP'} / {TASK_LABELS[task]}"
-        first_meta = next(iter(runs.values()))[0]
         n_queries = len(reference_arrays["positives"])
-        n_classes = first_meta["full_type_candidates"]
         setting = "frozen zero-shot" if stage == "zeroshot" else "fine-tuned checkpoint"
         context = f"Preliminary {setting} evaluation on the {contract.get('split', 'test')} split; {n_queries} queries."
         if stage == "finetuned":
@@ -115,7 +111,6 @@ def build_report(root, bootstrap=1000, seed=0):
             context += f" Checkpoint fine-tuned on {trained['train_view']}/{trained['train_variant']}, selected by validation MRR."
         if contract.get("limit", 0):
             context += " Limited-query smoke run."
-        target = {"movie_year": "calendar year", "movie_director": "director", "paper_conference": "conference"}[task]
         lp_protocol = ("Tail-only ranking over the true year plus 19 fixed frequency-matched negative years per query."
                        if task == "movie_year" else
                        "Tail-only ranking over the true director plus 19 fixed uniform negative directors per query."
@@ -131,16 +126,12 @@ def build_report(root, bootstrap=1000, seed=0):
                              "classification_classes": meta["full_type_candidates"]}
             rows.append((name, values))
             performance_csv.append(csv_row({"model": "MOTIF", "dataset": dataset, "task": task,
-                                           "view": view, "variant": variant, "queries": len(arrays["positives"])}, values))
-        for kind, columns in (("link_prediction", LP_COLUMNS), ("classification", CLASS_COLUMNS)):
-            extra = " (20-candidate link prediction)" if kind == "link_prediction" else f" (full-type classification: {n_classes} classes)"
-            protocol = (lp_protocol + " Tied scores use average rank." if kind == "link_prediction" else
-                        f"Predict the actual {target} among all {n_classes} target-type entities. "
-                        "Precision and recall are macro-averaged over this fixed class set with zero division set to zero. "
-                        "Micro-F1 equals accuracy for single-label prediction. Top-1 ties use the smallest global entity ID.")
-            part, tex = table(title + extra, rows, columns, f"tab:motif-{task}-{kind}", context + " " + protocol, bootstrap)
-            md.extend(part)
-            latex[kind].extend(tex)
+                                           "view": view, "variant": variant, "queries": len(arrays["positives"])},
+                                          {key: values[key] for key, _ in LP_COLUMNS}))
+        part, tex = table(title + " (20-candidate link prediction)", rows, LP_COLUMNS,
+                          f"tab:motif-{task}-link_prediction", context + " " + lp_protocol + " Tied scores use average rank.", bootstrap)
+        md.extend(part)
+        latex["link_prediction"].extend(tex)
         physical = sorted(v for view, v, repeat in runs if view == "physical" and not repeat)
         pairs, pair_rows = {}, []
         for first, second in combinations(physical, 2):
@@ -150,9 +141,12 @@ def build_report(root, bootstrap=1000, seed=0):
             pair_rows.append((name, comparison["metrics"]))
             invariance_csv.append(csv_row({"model": "MOTIF", "dataset": dataset, "task": task,
                                           "first": first, "second": second, "queries": comparison["num_queries"],
-                                          "undefined_tau_queries": comparison["undefined_tau_queries"]}, comparison["metrics"]))
-        pair_protocol = ("Both columns use the same original 20 candidates per query. Agreement@1 compares predicted entity IDs; "
+                                          "undefined_tau_queries": comparison["undefined_tau_queries"]},
+                                         {key: value for key, value in comparison["metrics"].items()
+                                          if key != "full_type_prediction_agreement"}))
+        pair_protocol = ("All columns use the same original 20 candidates per query. Agreement@1 compares predicted entity IDs; "
                          "Kendall tau-b compares candidate rankings within each query and is then averaged over queries. "
+                         "Delta MRR is the second variant minus the first. "
                          "Representation differences must be interpreted against the reference-repeat noise floor.")
         part, tex = table(title + " (20-candidate invariance)", pair_rows, PAIR_COLUMNS, f"tab:motif-{task}-invariance",
                           context + " " + pair_protocol, bootstrap)
@@ -185,6 +179,7 @@ def build_report(root, bootstrap=1000, seed=0):
         raise ValueError("Do not combine zero-shot and fine-tuned runs in one result directory")
     output = root / "tables"
     output.mkdir(exist_ok=True)
+    (output / "classification.tex").unlink(missing_ok=True)
     write_json(output / "summary.json", {"evaluation_stage": next(iter(observed_stages)), "report_status": "preliminary",
                                          "uncertainty": "bootstrap_standard_error", "bootstrap": bootstrap,
                                          "bootstrap_seed": seed, "tasks": summaries})

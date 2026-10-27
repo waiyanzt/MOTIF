@@ -1,29 +1,47 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
-\usepackage{booktabs}
 \usepackage{adjustbox}
 \usepackage{placeins}
-\title{MOTIF: Preliminary Zero-Shot Results}
+\title{MOTIF: Preliminary Link-Prediction and Invariance Results}
 \author{}
 \date{}
 \begin{document}
 \maketitle
 
-The tables compare physical graph representations using a frozen MOTIF checkpoint.
-Values are estimates plus/minus query-bootstrap standard error; protocols are stated in the captions.
-
-\tableofcontents
-
 \section{IMDb}
-\subsection{Movie--Year}
-\input{tables/imdb/movie_year/classification.tex}
+\subsection{Movie--Year: Zero-Shot}
+The released checkpoint is held fixed across graph variants.
+\input{tables/imdb/movie_year/link_prediction.tex}
+\FloatBarrier
 \input{tables/imdb/movie_year/invariance.tex}
 \FloatBarrier
 
 \clearpage
+\subsection{Movie--Year: Fine-Tuning}
+\input{tables/imdb/movie_year/matrix/training_notes.tex}
+
+The prediction-performance table has 16 rows, one for each combination of
+Fine-tuned on and Test graph. Matching labels give matched-variant results
+(C-a); the other 12 rows give transfer results (C-b).
+The invariance table labels two comparisons: C-a compares separately trained
+models on their own variants; C-b compares test variants with one checkpoint
+fixed, including the matched-variant reference. Each invariance row compares
+two prediction outputs: six C-a comparisons and 24 C-b comparisons in total.
+For example, checkpoint v1 with test graphs v1 vs v2 compares that same
+v1-trained checkpoint's predictions on the two graphs.
+\input{tables/imdb/movie_year/matrix/transfer_performance.tex}
+\FloatBarrier
+\input{tables/imdb/movie_year/matrix/invariance.tex}
+\FloatBarrier
+
+\clearpage
 \section{DBLP}
-\subsection{Paper--Conference}
-\input{tables/dblp/paper_conference/classification.tex}
+\subsection{Paper--Conference: Zero-Shot}
+The released checkpoint is held fixed across graph variants.
+\input{tables/dblp/paper_conference/link_prediction.tex}
+\FloatBarrier
+\input{tables/dblp/paper_conference/conference_prediction.tex}
+\FloatBarrier
 \input{tables/dblp/paper_conference/invariance.tex}
 \FloatBarrier
 

@@ -107,8 +107,7 @@ directories are rejected. See [data preparation](DATA_PREPARATION.md) for
 Run inside the GPU allocation after step 1. This evaluates the same fixed subset
 of 64 queries on four physical variants, four compiled views, and a separate
 physical v1 repeat: **nine inference processes**, run sequentially on one GPU.
-Both the 20-candidate link-prediction metrics and full 91-year classification
-metrics are calculated from this run.
+Reports use the guide's 20-candidate link-prediction and ranking-comparison metrics.
 
 ```bash
 set -o pipefail
@@ -151,7 +150,6 @@ results/motif_zeroshot_imdb_lp_smoke64/
     performance.csv
     invariance.csv
     link_prediction.tex
-    classification.tex
     invariance.tex
     controls.tex
 ```
@@ -197,8 +195,7 @@ see which tasks were exported on the HPC.
 The canonical Movie-Director family has **v1 and v3**, with Actor context on the
 Movie or Link respectively. Director is the supervised target and stays on the
 Movie; Year is fixed Movie context. There are 836 test queries, with the true
-director plus 19 fixed negatives for LP. Supplementary classification ranks all
-2,081 directors. All views and the reference repeat total five inference
+director plus 19 fixed negatives for LP. All views and the reference repeat total five inference
 processes, and reporting compares physical v1 vs v3.
 
 If `movie_director/manifest.json` exists in the default IMDb export:
@@ -294,11 +291,10 @@ python -u script/eval_lp.py --dataset dblp --task paper_conference \
 python script/report_lp.py --dataset dblp --run-tag full
 ```
 
-Reports go to `results/motif_zeroshot_dblp_lp_<tag>/tables/`, including LP and
-classification performance, the three variant pairs, repeat/compiled controls,
-query-bootstrap uncertainty and LaTeX. DBLP LP and classification both use the
-same 20-conference universe; IMDb's full-type classification is a supplementary
-larger pool. Generate reports on the HPC while the ignored score arrays are
+Reports go to `results/motif_zeroshot_dblp_lp_<tag>/tables/`, including LP
+performance, the three variant pairs, repeat/compiled controls,
+query-bootstrap uncertainty and LaTeX. DBLP uses the same 20-conference universe
+for every reported metric. Generate reports on the HPC while the ignored score arrays are
 available, before sharing text summaries through Git.
 
 ## 8. Preserve and share the results
@@ -352,8 +348,8 @@ python script/export_overleaf.py \
 
 Upload `results/overleaf/motif_zeroshot_tables.zip` as a new Overleaf project and
 compile `main.tex` there. The project groups tables under dataset/task folders
-and presents physical-variant classification and pairwise comparisons. Add
-`--include-lp` for MRR/Hits tables. Choose a fresh output name for later exports.
+and presents physical-variant MRR/Hits and pairwise comparisons by default.
+Choose a fresh output name for later exports.
 This command uses the existing LaTeX and JSON reports; it does not require score
 arrays, a GPU or local LaTeX compilation. See [Overleaf results](OVERLEAF_RESULTS.md)
 for the project layout and how to add Movie-Director later.
@@ -362,11 +358,8 @@ for the project layout and how to add Movie-Director later.
 
 * `link_prediction.tex`: true tail plus 19 supplied negatives, tail-only MRR and
   Hits@1/3/10, with average ranks for ties.
-* `classification.tex`: actual year prediction over all 91 years for Movie-Year;
-  accuracy, macro-precision, macro-recall, Micro-F1 and Macro-F1. Micro-F1 equals
-  accuracy for this single-label setting.
 * `invariance.tex`: all six physical Movie-Year pairs, with separate Agreement@1
-  and Kendall tau-b columns over the original 20 candidates.
+  and Kendall tau-b columns, plus Delta MRR, over the original 20 candidates.
 * `controls.tex`: the independent reference repeat, used as the inference-noise
   floor. Compiled-input/output agreement is also recorded in Markdown/JSON.
 

@@ -1,18 +1,22 @@
-% Requires booktabs and adjustbox.
+% Requires adjustbox.
 \begin{table}[htbp]
 \centering
 \small
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{5pt}
 \begin{adjustbox}{max width=\linewidth}
-\begin{tabular}{lrr}
-\toprule
-Comparison & Agreement@1 & Kendall $\tau_b$ \\
-\midrule
-v1 vs v2 & $0.8953 \pm 0.0057$ & $0.9506 \pm 0.0005$ \\
-v1 vs v3 & $0.9070 \pm 0.0058$ & $0.9570 \pm 0.0005$ \\
-v2 vs v3 & $0.9156 \pm 0.0055$ & $0.9591 \pm 0.0004$ \\
-\bottomrule
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+\textbf{Method} & \textbf{Comparison} & \textbf{Agreement@1} & \textbf{Kendall-$\tau_b$} & \textbf{$\Delta$MRR} \\
+\hline
+MOTIF & v1 vs v2 & $0.8953 \pm 0.0057$ & $0.9506 \pm 0.0005$ & $-0.0114 \pm 0.0023$ \\
+\hline
+MOTIF & v1 vs v3 & $0.9070 \pm 0.0058$ & $0.9570 \pm 0.0005$ & $-0.0083 \pm 0.0022$ \\
+\hline
+MOTIF & v2 vs v3 & $0.9156 \pm 0.0055$ & $0.9591 \pm 0.0004$ & $0.0031 \pm 0.0021$ \\
+\hline
 \end{tabular}
 \end{adjustbox}
-\caption{MOTIF / DBLP / Paper-Conference (20-candidate representation sensitivity). Preliminary frozen zero-shot evaluation of physical variants on the test split; 2666 queries. Both columns use the same original 20 candidates per query. Agreement@1 compares predicted entity IDs; Kendall tau-b compares candidate rankings within each query and is then averaged over queries. Values are estimates plus/minus bootstrap standard error from 1000 query resamples.}
+\caption{Preliminary zero-shot MOTIF results on DBLP Paper--Conference; 2,666 test queries. The checkpoint is fixed across variants. Both rankings use the same 20 candidates per query. Agreement@1 compares predictions; Kendall tau-b compares rankings. Delta MRR is the second variant minus the first. Values are estimates $\pm$ bootstrap standard error (1,000 query resamples).}
 \label{tab:motif-dblp-paper-conference-invariance}
 \end{table}

@@ -40,6 +40,8 @@ To combine IMDb and DBLP tables into one uploadable Overleaf project, use the
 [Overleaf export instructions](docs/OVERLEAF_RESULTS.md).
 For four-variant IMDb training, the full train/test transfer matrix and fine-tuned LaTeX tables,
 see the [IMDb fine-tuning runbook](docs/IMDB_FINE_TUNING.md).
+For the three-variant DBLP Paper-Conference experiment and its three tables,
+see the [DBLP fine-tuning runbook](docs/DBLP_FINE_TUNING.md).
 
 ## Synthetic experiments ##
 

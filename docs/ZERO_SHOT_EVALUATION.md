@@ -5,7 +5,7 @@ For the step-by-step command sequence, see the
 
 The upstream `script/run.py:test` supports zero-shot evaluation and reports MR,
 MRR and Hits@k, normally with full-entity head/tail ranking and pessimistic ties.
-It does not supply the requested classification metrics, all-pairs invariance,
+It does not supply our all-pairs invariance,
 bootstrap uncertainty or LaTeX reports.
 
 Our `script/eval_lp.py` reads the portable exports, adds inverses once, invokes
@@ -30,32 +30,26 @@ encoder's local padding-count increment cannot mutate the graph's stored count.
 
 ## Metric definitions
 
-Two settings are explicitly separate:
+All presentation metrics follow guide B2: IMDb uses the positive target plus
+19 fixed supplied negatives; DBLP ranks all 20 conferences. Report MRR and
+Hits@1/3/10 with `rank = 1 + better + tied/2`. Repeated IMDb negative years stay
+repeated. Prediction agreement resolves top-score ties by the smallest global
+entity ID, never the positive-first candidate position.
 
-* **Original link prediction:** positive plus 19 supplied candidates. Report MRR
-  and Hits@1/3/10 with `rank = 1 + better + tied/2`. Repeated IMDb negative years
-  stay repeated. DBLP uses all 20 conferences.
-* **Supplementary full-type classification:** predict the actual year, director,
-  or conference over the full pool (91 / 2,081 / 20 classes). Report accuracy,
-  macro-precision, macro-recall, micro-F1 and macro-F1. Macro averages include the
-  full fixed class set with zero_division=0. Micro-F1 equals accuracy in this
-  single-label setting. Score ties choose the smallest global entity ID, never
-  the positive-first candidate position.
-
-Full-year classification accuracy is a different protocol from sampled
-20-candidate accuracy. Compare trained baselines only under matched candidate
-and tie rules. No classification threshold or new year/genre label edges are
-introduced. The native model scores the full target-type pool; the benchmark's
-20 scores are gathered from those outputs. No full-entity score matrix is saved.
+Compare trained baselines only under matched candidate and tie rules. No
+genre-prediction task or new classification head is introduced. Existing score
+files contain scores for the target-type pool; the benchmark's 20 scores are
+gathered from those outputs. Historical full-type metrics are retained as source
+records but are not part of the guide-based tables.
 Held-out targets and equivalent copies are excluded from both Lift and entity
 message passing; training target links remain permitted context.
 
-The pairwise table has separate **Agreement@1** and **Kendall tau-b** columns, both
-on the original 20-candidate setting. Agreement compares the predicted actual
+The pairwise table has separate **Agreement@1**, **Kendall tau-b** and **Delta MRR**
+columns on the original 20-candidate setting. Agreement compares the predicted actual
 entity IDs. Tau-b compares aligned candidate-score vectors within each query,
 then averages over queries; it is not correlation between aggregate MRR values.
 Movie-Year has all six v1-v4 pairs, DBLP three, Movie-Director one. JSON/CSV also
-contain paired delta MRR, Hit@1/10 flips, full-type prediction agreement, bitwise
+contain paired delta MRR, Hit@1/10 flips, bitwise
 equality and maximum absolute score differences.
 
 The guide's convention is preserved: identical score vectors (including
@@ -131,7 +125,6 @@ The run root's `tables/` contains:
 
 ```text
 link_prediction.tex
-classification.tex
 invariance.tex
 controls.tex
 performance.csv
@@ -151,10 +144,9 @@ inference, metric recomputation or local PDF compilation is needed.
 
 Every table caption explicitly identifies this as a preliminary frozen zero-shot
 evaluation, the split, query count, candidate protocol and bootstrap error-bar
-definition. Limited-query runs are labeled as smoke runs. Classification
-captions name the prediction target, full class count, averaging and tie rules;
-the invariance caption states that both columns use the original 20 candidates.
-This is the exploratory evaluation for discussion, with both settings retained.
+definition. Limited-query runs are labeled as smoke runs. The invariance caption
+states that all columns use the original 20 candidates, with Delta MRR defined
+as the second variant minus the first. This is the exploratory evaluation for discussion.
 
 Reports reject mismatched checkpoints, query/candidate identities,
 precision, hardware, model/adapter source hashes and inference settings. They

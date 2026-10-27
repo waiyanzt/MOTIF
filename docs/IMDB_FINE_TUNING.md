@@ -29,8 +29,9 @@ This follows section C of
 * Validation MRR on all 418 validation queries selects each checkpoint. Test
   labels are not used for training or checkpoint selection. Step-zero validation
   is recorded separately; validation ties retain the earlier trained checkpoint.
-* Each evaluation uses all 834 shared test queries. Classification predicts over
-  the full year pool; LP and ranking comparisons use the original 20 candidates.
+* Each evaluation uses all 834 shared test queries and the original 20 candidates:
+  the correct year and the same 19 fixed incorrect years. All presentation metrics
+  use this candidate protocol, following guide B2.
 
 The pilot defaults are Adam, learning rate `5e-4`, batch size 4, gradient-norm
 clipping at 1 and 1,000 optimizer steps **per variant**. All existing trainable
@@ -138,15 +139,8 @@ results/motif_finetune_matrix_imdb_lp_matrix_s1024/
     report.md
     performance.csv
     comparisons.csv
-    classification_diagonal.tex
-    classification_all.tex
-    transfer_accuracy.tex
-    transfer_macro_f1.tex
-    per_variant_comparisons.tex
-    transfer_comparisons.tex
-    link_prediction_diagonal.tex
-    link_prediction_all.tex
-    transfer_mrr.tex
+    transfer_performance.tex
+    invariance.tex
 ```
 
 The runner generates these automatically. To regenerate tables without running
@@ -160,19 +154,31 @@ python script/report_finetune_matrix.py \
 
 The presentation tables are:
 
-* `classification_diagonal.tex`: four matched-variant rows, with Accuracy,
-  macro Precision, macro Recall, Micro-F1 and Macro-F1.
-* `classification_all.tex`: all 16 rows with explicit **Train** and **Test**
-  columns and the same classification metrics.
-* `transfer_accuracy.tex` and `transfer_macro_f1.tex`: 4-by-4 matrices, training
-  variant on rows and test variant on columns.
-* `per_variant_comparisons.tex`: six variant pairs using the independently
-  trained diagonal models. Both training and representation vary here.
-* `transfer_comparisons.tex`: six test-variant pairs for each of the four fixed
-  checkpoints, with Agreement@1 and Kendall tau-b in separate columns. These
-  compare representations while holding the trained weights fixed.
-* The separate `link_prediction_*.tex` and `transfer_mrr.tex` files retain
-  MOTIF-style ranking metrics with explicit 20-candidate captions.
+* `transfer_performance.tex`: 16 rows, one per Fine-tuned on/Test graph combination,
+  with MRR and Hits@1/3/10 columns, matching the zero-shot table. Four matched pairs are C-a; the other 12 are C-b.
+  A row such as v1/v1 evaluates the v1-trained checkpoint on the v1 graph.
+* `invariance.tex`: one table with Regime, Checkpoint trained on and Test graphs
+  compared labels. C-a contains the six
+  pairs of separately trained diagonal models; C-b contains all six test-variant
+  pairs for each of the four fixed checkpoints, including the matched reference.
+  Columns are Agreement@1, Kendall tau-b and Delta MRR (second variant minus
+  first), all over the original 20 candidates. C-a changes both weights and
+  graphs; each C-b group holds weights fixed.
+
+The 16 performance evaluations produce outputs that can be compared in different
+pairs. The invariance table has 30 comparisons: six C-a pairs and six C-b pairs
+for each of four checkpoints. For example, C-b checkpoint v1, test graphs v1 vs
+v2 compares the v1-trained checkpoint's outputs on those two graphs. C-a v1 vs
+v2 compares the v1-trained/v1-tested outputs with the v2-trained/v2-tested
+outputs. The guide requests a train/test transfer matrix and cross-variant tau;
+it does not prescribe 16 invariance rows. Comparing an output with itself gives
+trivial agreement/tau of one and is omitted.
+
+These are the only two fine-tuning presentation tables. Full-year prediction
+tables and duplicate diagonal/all-cell views are not generated. Historical
+numerical records remain available in the saved summaries. Training time, peak
+allocated GPU memory and edge-removal totals are reported in the export's method
+notes when recorded metadata are available.
 
 The original single-checkpoint reporter still requires identical weights within
 each evaluation row. The matrix reporter explicitly handles comparisons across
@@ -189,9 +195,9 @@ python script/export_overleaf.py \
   --output results/overleaf/motif_imdb_finetune_matrix_s1024
 ```
 
-Add `--include-lp` to include MRR/Hits tables and the MRR matrix. Upload the
-generated ZIP to Overleaf and compile `main.tex` there. The exporter reads only
-the saved summary, so it can also run locally after pulling the text reports;
+LP tables are always included; the old `--include-lp` flag is accepted for
+compatibility. Upload the generated ZIP to Overleaf and compile `main.tex` there.
+The exporter uses saved summaries, so it can also run locally after pulling the text reports;
 raw score arrays and checkpoints can remain on the HPC.
 
 You can combine this matrix with IMDb and DBLP zero-shot reports in the same

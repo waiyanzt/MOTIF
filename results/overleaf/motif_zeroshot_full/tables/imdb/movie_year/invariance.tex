@@ -1,21 +1,28 @@
-% Requires booktabs and adjustbox.
+% Requires adjustbox.
 \begin{table}[htbp]
 \centering
 \small
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{5pt}
 \begin{adjustbox}{max width=\linewidth}
-\begin{tabular}{lrr}
-\toprule
-Comparison & Agreement@1 & Kendall $\tau_b$ \\
-\midrule
-v1 vs v2 & $0.2410 \pm 0.0146$ & $0.6166 \pm 0.0085$ \\
-v1 vs v3 & $0.3465 \pm 0.0160$ & $0.6748 \pm 0.0075$ \\
-v1 vs v4 & $0.7806 \pm 0.0147$ & $0.9101 \pm 0.0038$ \\
-v2 vs v3 & $0.6379 \pm 0.0174$ & $0.9114 \pm 0.0043$ \\
-v2 vs v4 & $0.2950 \pm 0.0153$ & $0.6672 \pm 0.0082$ \\
-v3 vs v4 & $0.2518 \pm 0.0151$ & $0.6433 \pm 0.0083$ \\
-\bottomrule
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+\textbf{Method} & \textbf{Comparison} & \textbf{Agreement@1} & \textbf{Kendall-$\tau_b$} & \textbf{$\Delta$MRR} \\
+\hline
+MOTIF & v1 vs v2 & $0.2410 \pm 0.0146$ & $0.6166 \pm 0.0085$ & $0.0100 \pm 0.0100$ \\
+\hline
+MOTIF & v1 vs v3 & $0.3465 \pm 0.0160$ & $0.6748 \pm 0.0075$ & $-0.0249 \pm 0.0085$ \\
+\hline
+MOTIF & v1 vs v4 & $0.7806 \pm 0.0147$ & $0.9101 \pm 0.0038$ & $0.0182 \pm 0.0040$ \\
+\hline
+MOTIF & v2 vs v3 & $0.6379 \pm 0.0174$ & $0.9114 \pm 0.0043$ & $-0.0349 \pm 0.0057$ \\
+\hline
+MOTIF & v2 vs v4 & $0.2950 \pm 0.0153$ & $0.6672 \pm 0.0082$ & $0.0082 \pm 0.0101$ \\
+\hline
+MOTIF & v3 vs v4 & $0.2518 \pm 0.0151$ & $0.6433 \pm 0.0083$ & $0.0431 \pm 0.0095$ \\
+\hline
 \end{tabular}
 \end{adjustbox}
-\caption{MOTIF / IMDb / Movie-Year (20-candidate representation sensitivity). Preliminary frozen zero-shot evaluation of physical variants on the test split; 834 queries. Both columns use the same original 20 candidates per query. Agreement@1 compares predicted entity IDs; Kendall tau-b compares candidate rankings within each query and is then averaged over queries. Values are estimates plus/minus bootstrap standard error from 1000 query resamples.}
+\caption{Preliminary zero-shot MOTIF results on IMDb Movie--Year; 834 test queries. The checkpoint is fixed across variants. Both rankings use the same 20 candidates per query. Agreement@1 compares predictions; Kendall tau-b compares rankings. Delta MRR is the second variant minus the first. Values are estimates $\pm$ bootstrap standard error (1,000 query resamples).}
 \label{tab:motif-imdb-movie-year-invariance}
 \end{table}

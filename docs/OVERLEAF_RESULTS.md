@@ -1,91 +1,90 @@
-# Combine IMDb and DBLP tables in Overleaf
+# MOTIF results in Overleaf
 
-The presentation project uses simple bordered tables: Dataset, Method, Variant,
-Accuracy, Precision, Recall, Micro-F1 and Macro-F1; then a separate Method,
-Comparison, Agreement@1 and Kendall tau-b table. Dataset/task folders keep filenames distinct.
-It uses previously generated reports and does not rerun inference, recompute
-metrics, load score arrays or compile a PDF locally.
+The presentation follows the candidate protocol in guide B2: IMDb Movie-Year
+ranks the correct year against the same 19 fixed negative years; DBLP ranks all
+20 conferences. All presentation metrics use those candidates.
 
-After generating reports on the HPC and pulling them locally, run from MOTIF:
+The combined project is `results/overleaf/motif_zeroshot_full/`; the name is
+retained for continuity. Its ZIP contains IMDb and DBLP zero-shot results and the
+IMDb fine-tuning results.
 
-```bash
-python script/export_overleaf.py \
-  --run results/motif_zeroshot_imdb_lp_full \
-  --run results/motif_zeroshot_dblp_lp_full \
-  --output results/overleaf/motif_zeroshot_tables
-```
+## Tables
 
-This needs only Python's standard library, so it also works on the HPC or in a
-local Python environment without Torch. Choose a fresh `--output` when making a
-new version. Add `--include-lp` to include MRR/Hits tables. To add Movie-Director
-later, supply its completed result directory as another `--run`; use only one
-run per dataset/task/evaluation setting.
+Each zero-shot dataset/task has two tables:
 
-The project layout is:
+* `link_prediction.tex`: MRR and Hits@1/3/10 per physical variant.
+* `invariance.tex`: Agreement@1, Kendall tau-b and Delta MRR for variant pairs,
+  with the released checkpoint fixed.
 
-```text
-results/overleaf/
-  motif_zeroshot_tables.zip
-  motif_zeroshot_tables/
-    main.tex
-    README.md
-    tables/
-      imdb/
-        movie_year/
-          classification.tex
-          invariance.tex
-      dblp/
-        paper_conference/
-          classification.tex
-          invariance.tex
-```
+DBLP zero-shot also has `conference_prediction.tex` with macro Precision, Recall
+and F1. Accuracy and Micro-F1 are omitted because they equal Hits@1 there.
 
-Upload `motif_zeroshot_tables.zip` as a new Overleaf project. Set `main.tex` as the
-main document if necessary, then Recompile and download the PDF. In an existing
-project, retain the folder hierarchy and copy the corresponding `\input` paths
-from `main.tex`. Edit those lines to choose which tables appear. The template
-groups tasks by dataset and includes table-width limits to fit the page.
+IMDb Movie-Year fine-tuning has exactly two tables in
+`tables/imdb/movie_year/matrix/`:
 
-## Include the IMDb fine-tuning matrix
+* `transfer_performance.tex`: 16 rows with Fine-tuned on, Test graph, MRR and
+  Hits@1/3/10 columns. Matching train/test variants are matched-variant evaluation
+  (C-a); the other 12 rows are cross-representation transfer (C-b).
+* `invariance.tex`: Agreement@1, Kendall tau-b and Delta MRR, with Regime,
+  Checkpoint trained on and Test graphs compared labels. C-a compares the separately trained diagonal models; C-b compares test
+  variants with each selected checkpoint fixed, including its matched reference.
+  There are six C-a comparisons plus 24 C-b comparisons. Each row compares two
+  prediction outputs; a single train/test performance row supplies one output.
 
-After the four fine-tunes and 16 evaluations have generated their combined report,
-add that matrix directory as another source. Zero-shot and fine-tuned Movie-Year
-results can share the same project:
+DBLP Paper-Conference fine-tuning has at most three tables in
+`tables/dblp/paper_conference/matrix/`:
+
+* `conference_prediction.tex`: macro Precision, Recall and F1 (Accuracy and Micro-F1 equal Hits@1).
+* `link_prediction.tex`: MRR and Hits@1/3/10 for the same train/test cells.
+* `invariance.tex`: C-a/C-b labelled Agreement@1, Kendall tau-b and Delta MRR.
+
+Both DBLP performance tables combine all nine Train/Test cells: matching labels
+are C-a and different labels are C-b. All metrics use the same 20 conferences;
+there is no extra node-classification experiment. See the
+[DBLP fine-tuning runbook](DBLP_FINE_TUNING.md).
+
+Delta MRR is always the second test variant minus the first. The extra full-year
+prediction tables and duplicate diagonal/all-cell tables are removed from the
+presentation. Recorded training cost and target-edge removal counts appear as
+method notes rather than additional tables.
+
+This is a single-training-seed preliminary experiment. Error bars are
+query-bootstrap SE, not the across-training-seed mean/SD requested for the full
+guide protocol. Repeated training and the multi-seed noise floor remain pending.
+
+## Upload the existing project
+
+Upload `results/overleaf/motif_zeroshot_full.zip` as a new Overleaf project and
+compile `main.tex`. To update an existing Overleaf project, replace `main.tex`
+and upload the updated `tables/` contents while retaining the folder hierarchy.
+The previous classification files can be deleted from the Overleaf project;
+the new main document does not reference them. No local PDF compilation is needed.
+
+## Generate a new export from saved reports
+
+Run from MOTIF, on the HPC or locally after pulling the text reports:
 
 ```bash
 python script/export_overleaf.py \
   --run results/motif_zeroshot_imdb_lp_full \
   --run results/motif_zeroshot_dblp_lp_full \
   --run results/motif_finetune_matrix_imdb_lp_matrix_s1024 \
-  --output results/overleaf/motif_zero_and_finetuned_s1024
+  --output results/overleaf/motif_guide_results
 ```
 
-The matrix uses `tables/imdb/movie_year/matrix/` and distinct LaTeX labels. It
-contains the four matched-variant results, all 16 Train/Test rows, Accuracy and
-Macro-F1 transfer matrices, and Agreement@1/Kendall tau-b comparisons. Comparisons
-between independently trained models and comparisons using one fixed checkpoint
-are separate tables with explicit captions. Add `--include-lp` for the separate
-MRR/Hits tables and MRR matrix.
+Choose a fresh `--output` for later exports. LP is included by default; the old
+`--include-lp` flag is accepted for compatibility. The exporter uses only
+Python's standard library and saved summaries. If older matrix summaries lack
+cost fields, it also reads the corresponding saved training summaries when
+available. It does not load model checkpoints or raw score arrays.
 
-Edit the `\input` lines in the exported `main.tex` to select tables. For example,
-retain `matrix/classification_all.tex` and `matrix/transfer_comparisons.tex` for
-the full classification results and the four sets of fixed-checkpoint ranking
-comparisons. All uncertainty in this single-seed experiment is query-bootstrap
-SE, not standard deviation across training seeds.
+Dataset/task folders and distinct LaTeX labels keep zero-shot and fine-tuned
+results separate in one document. Edit `main.tex` to choose which tables appear.
+See the [fine-tuning runbook](IMDB_FINE_TUNING.md) for the experiment commands.
 
-The exporter needs only `tables/summary.json` from each source run. Large score
-arrays and training checkpoints can stay on the HPC. See the
-[fine-tuning runbook](IMDB_FINE_TUNING.md) for training and report commands.
+## Source records
 
-## What “compiled” meant in the source reports
-
-The source `compiled` view is SCR's existing semantic-program graph, exported
-from the canonical preprocessing bundles. Each variant maps to the same graph
-within a task. MOTIF receives that graph as input, so identical inputs can
-produce identical results. This does not implement or demonstrate a learned
-invariance algorithm inside MOTIF. It is also separate from MOTIF's Lift,
-which constructs a relation hypergraph for each input graph.
-
-The presentation copies show only the physical graph variants whose outputs
-we are comparing. Original report files and saved numerical results are retained.
-Only labels, layout, selection of rows/tables and presentation wording change.
+Original numerical summaries, score files and checkpoint provenance remain
+unchanged. Historical extra metrics may still be present in numerical records;
+they are not included in the guide-based presentation. Compiled and repeat
+controls are also kept outside the presentation.

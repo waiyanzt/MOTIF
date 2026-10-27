@@ -1,0 +1,9 @@
+Each variant starts independently from the released checkpoint and uses 1,000 optimizer steps. Validation MRR selects each checkpoint. Training seed: 1024.
+
+Hardware: NVIDIA H100 80GB HBM3 MIG 4g.40gb.
+
+Recorded training time / peak allocated GPU memory: v1: 54.18 s / 0.770 GiB; v2: 52.02 s / 0.770 GiB; v3: 51.65 s / 0.770 GiB; v4: 51.72 s / 0.770 GiB.
+
+Batch target-edge and inverse removals: 7,994 per training run (7.994 per update on average).
+
+This is a single-seed preliminary experiment. Error bars are query-bootstrap standard errors. The guide's repeated-training noise floor and multi-seed mean/standard deviation are not yet available.

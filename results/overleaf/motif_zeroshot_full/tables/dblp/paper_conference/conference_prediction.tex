@@ -1,0 +1,22 @@
+% Requires adjustbox.
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{5pt}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{|l|l|l|l|l|l|}
+\hline
+\textbf{Dataset} & \textbf{Method} & \textbf{Variant} & \textbf{Precision (macro)} & \textbf{Recall (macro)} & \textbf{Macro-F1} \\
+\hline
+DBLP & MOTIF & v1 & $0.3203 \pm 0.0140$ & $0.3077 \pm 0.0090$ & $0.2955 \pm 0.0094$ \\
+\hline
+DBLP & MOTIF & v2 & $0.3339 \pm 0.0161$ & $0.2907 \pm 0.0084$ & $0.2831 \pm 0.0096$ \\
+\hline
+DBLP & MOTIF & v3 & $0.3231 \pm 0.0152$ & $0.2938 \pm 0.0084$ & $0.2847 \pm 0.0093$ \\
+\hline
+\end{tabular}
+\end{adjustbox}
+\caption{Preliminary zero-shot MOTIF results on DBLP Paper--Conference; 2,666 test queries. Top-1 conference prediction; precision, recall and F1 are macro-averaged over all 20 conferences. Accuracy and Micro-F1 equal Hits@1 in the ranking table and are omitted. Top-score ties use the smallest global conference ID. Values are estimates $\pm$ bootstrap standard error (1,000 query resamples).}
+\label{tab:motif-dblp-paper-conference-conference_prediction}
+\end{table}
