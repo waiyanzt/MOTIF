@@ -22,10 +22,11 @@ from report_lp import write_csv
 
 METRICS = (("mrr", "MRR"), ("hits@1", "Hits@1"), ("hits@3", "Hits@3"),
            ("precision", "Precision"), ("recall", "Recall"))
-DATASETS = {"imdb": TASK_VARIANTS, "dblp": DBLP_TASK_VARIANTS}
+DATASETS = {"imdb": TASK_VARIANTS, "dblp": DBLP_TASK_VARIANTS, "wordnet": {"link_prediction": ("v1", "v2", "v3")}}
+NAMES = {"imdb": "IMDb", "dblp": "DBLP", "wordnet": "WN18RR"}
 # Baseline .tex block suffixes and column orders, from SCR docs/results/*_lp.tex.
 BASELINE_TASK_LABELS = {"movie_year": " / Movie--Year (MY)", "movie_director": " / Movie--Director (MD)",
-                        "paper_conference": ""}
+                        "paper_conference": "", "link_prediction": ""}
 BASELINE_RESULT_COLUMNS = ("precision", "recall", "f1", "hits@1", "hits@3", "mrr")
 BASELINE_TAU_COLUMNS = ("tau", "tau@1", "tau@3")
 
@@ -36,10 +37,29 @@ def load_scores(path):
 
 
 def performance(arrays):
-    ranks = average_ranks(arrays["scores"])
+    # WordNet ranks come from filtered full-entity ranking; its score rows are sampled candidates.
+    ranks = arrays["ranks"] if "ranks" in arrays else average_ranks(arrays["scores"])
     return {"mrr": float(np.mean(1 / ranks)), "hits@1": float(np.mean(ranks <= 1)),
             "hits@3": float(np.mean(ranks <= 3)),
-            **binary_metrics(arrays["scores"], arrays["candidates"], arrays["positives"])}
+            **binary_metrics(arrays["scores"], arrays.get("candidates"), arrays.get("positives"))}
+
+
+def wordnet_runs(roots, variants, zeroshot=False):
+    """{seed: {variant: arrays}} from script/wordnet_lp.py eval outputs. Each seed reads its own
+    CMPNN-style candidate rows; zero-shot has one model, so its spread is candidate sampling only."""
+    runs = {}
+    for root in roots:
+        for variant in variants:
+            directory = root / "link_prediction" / "physical" / variant
+            meta = json.loads((directory / "metrics.json").read_text(encoding="utf-8"))
+            if meta["limit"]:
+                raise ValueError(f"Smoke-test evaluation (limit {meta['limit']}): {directory}")
+            scores = load_scores(directory / "scores.npz")
+            for seed in (meta["candidate_seeds"] if zeroshot else [meta["seed"]]):
+                if variant in runs.setdefault(seed, {}):
+                    raise ValueError(f"Duplicate seed {seed} for {variant}: {directory}")
+                runs[seed][variant] = {"scores": scores[f"scores_{seed}"], "ranks": scores["ranks"]}
+    return runs
 
 
 def aggregate(values):
@@ -159,13 +179,18 @@ def write_outputs(summary, output):
     performance_groups = [(name, block["performance"]) for name, block in summary["methods"].items()]
     tau_groups = [(name, block["invariance"]) for name, block in summary["methods"].items()]
     seeds = summary["finetune_seeds"]
+    wordnet = dataset == "wordnet"
+    zeroshot_note = ("zero-shot spread is over the three seeds' candidate draws (ranking metrics are exact). "
+                     if wordnet else "zero-shot has no training seed (std 0). ")
     note = (f"Mean $\\pm$ population std over training seeds ({', '.join(map(str, seeds))}); "
-            "zero-shot has no training seed (std 0). ") if seeds else "Zero-shot only (std 0). "
-    name = {"imdb": "IMDb", "dblp": "DBLP"}[dataset] + " " + task.replace("_", "--").title()
+            + zeroshot_note) if seeds else "Zero-shot only. "
+    name = NAMES[dataset] + ("" if wordnet else " " + task.replace("_", "--").title())
+    protocol = ("MRR and Hits use filtered ranking over all 40,943 entities, head and tail queries; "
+                "Precision/Recall use the positive plus 100 seeded candidates per query, "
+                if wordnet else "Ranking over 20 candidates per query; Precision/Recall pool all (query, candidate) pairs, ")
     (output / "performance.tex").write_text(latex_table(
         performance_groups, METRICS, variants, f"tab:{dataset}_{task}_seed_performance",
-        f"{name} link prediction over 20 candidates per query. {note}"
-        "Precision/Recall pool all (query, candidate) pairs at $\\sigma(s) \\geq 0.5$.", "Variant"),
+        f"{name} link prediction. {protocol}positive at $\\sigma(s) \\geq 0.5$. {note}", "Variant"),
         encoding="utf-8")
     (output / "invariance.tex").write_text(latex_table(
         tau_groups, (("tau", "Kendall-$\\tau$"),), pairs, f"tab:{dataset}_{task}_seed_invariance",
@@ -193,7 +218,7 @@ def main():
     parser.add_argument("--task")
     parser.add_argument("--zeroshot", type=Path, help="A report_lp/eval_lp run root, e.g. results/motif_zeroshot_imdb_lp_full")
     parser.add_argument("--finetune", type=Path, nargs="*", default=[],
-                        help="One run_finetune_matrix.py root per training seed")
+                        help="One run_finetune_matrix.py root (WordNet: wordnet_lp.py finetuned eval root) per training seed")
     parser.add_argument("--baseline-tex", type=Path, help="Lab results file, e.g. SCR/.../docs/results/IMDB_lp.tex")
     parser.add_argument("--baseline", default="CMPNN", help="Model name of the baseline block")
     parser.add_argument("--output", type=Path)
@@ -207,18 +232,22 @@ def main():
     if args.baseline_tex:
         methods[args.baseline] = parse_baseline(args.baseline_tex, args.baseline, task)
     sources = []
+    wordnet = args.dataset == "wordnet"
     if args.zeroshot:
-        zeroshot = {"zero-shot": {v: load_scores(args.zeroshot / task / "physical" / v / "scores.npz")
-                                  for v in variants}}
+        zeroshot = (wordnet_runs([args.zeroshot], variants, zeroshot=True) if wordnet else
+                    {"zero-shot": {v: load_scores(args.zeroshot / task / "physical" / v / "scores.npz")
+                                   for v in variants}})
         sources.append(("MOTIF (ZS)", zeroshot))
-    finetuned = finetuned_runs(args.finetune, args.dataset, task, variants) if args.finetune else {}
+    finetuned = ((wordnet_runs(args.finetune, variants) if wordnet else
+                  finetuned_runs(args.finetune, args.dataset, task, variants)) if args.finetune else {})
     if finetuned:
         sources.append(("MOTIF (FT)", finetuned))
     for method, runs in sources:
         for arrays in (a for seed in runs.values() for a in seed.values()):
             if reference is None:
                 reference = arrays
-            check_alignment(reference, arrays)
+            if not wordnet:  # WordNet rows are aligned by construction: same split order and seeded draws.
+                check_alignment(reference, arrays)
         methods[method] = {"source": "motif", **summarize(runs, variants)}
     summary = {"format": "motif_seed_summary_v1", "dataset": args.dataset, "task": task, "variants": variants,
                "finetune_seeds": sorted(finetuned), "aggregation": "mean and population std (ddof=0) over seeds",

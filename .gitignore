@@ -179,10 +179,11 @@ kg-datasets/
 ULTRA_pilot
 
 # Retain text reports, LaTeX tables and result logs; exclude binary artifacts.
+# Track only report artifacts. Per-run outputs (checkpoints, scores, training histories,
+# per-cell metrics, logs) stay on the HPC and are regenerated from code + seeds.
 /results/**
 !/results/**/
-!/results/**/*.json
-!/results/**/*.md
-!/results/**/*.tex
-!/results/**/*.csv
-!/results/**/*.log
+!/results/overleaf/**/*.tex
+!/results/overleaf/**/*.md
+!/results/seed_summary_*/*
+!/results/zeroshot_summary_*/*

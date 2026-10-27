@@ -55,11 +55,16 @@ def point_metrics(scores, positives, pool, full_scores):
     return result
 
 
-def binary_metrics(scores, candidates, positives):
+def binary_metrics(scores, candidates=None, positives=None):
     """Lab METRICS.md 3.3: every (query, candidate) pair is a binary instance predicted
-    positive at sigmoid(logit) >= 0.5; Precision/Recall are pooled over all pairs."""
-    scores, candidates = np.asarray(scores), np.asarray(candidates)
-    labels = candidates == np.asarray(positives)[:, 1:2]
+    positive at sigmoid(logit) >= 0.5; Precision/Recall are pooled over all pairs.
+    Without candidate ids (WordNet's sampled rows), column 0 is the only positive."""
+    scores = np.asarray(scores)
+    if candidates is None:
+        labels = np.zeros(scores.shape, dtype=bool)
+        labels[:, 0] = True
+    else:
+        labels = np.asarray(candidates) == np.asarray(positives)[:, 1:2]
     if not np.array_equal(labels.sum(1), np.ones(len(labels))) or not labels[:, 0].all():
         raise ValueError("Each query needs exactly one positive candidate, in column 0")
     predicted = scores >= 0

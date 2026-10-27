@@ -53,3 +53,50 @@ This step runs on CPU in a few seconds. It writes `results/seed_summary_<dataset
   `--baseline` selects a different model block, e.g. `RGCN`.
 * Drop `--zeroshot` or `--finetune` to report only one of them.
 * All matrices passed together must share code and settings, apart from the seed.
+
+## 3. IMDb Movie-Director (v1, v3)
+
+The task is exported from the lab's own bundles (the same ones CMPNN used):
+
+```bash
+python script/prepare_imdb_lp.py --tasks movie_director \
+  --bundle-root ../SCR/rai-datasets/preprocessed/RGCN_structural_v10_year_canonfeat/IMDB \
+  --output rai-datasets/preprocessed/IMDB_movie_director
+MD=DATASET=imdb,TASK=movie_director,DATA=rai-datasets/preprocessed/IMDB_movie_director
+sbatch --export=ALL,$MD,RUN_TAG=md_full slurm/zeroshot.sbatch
+sbatch -p dgx2 --constraint=v100 --export=ALL,$MD,RUN_TAG=md_seeds2 slurm/finetune_seeds.sbatch
+python script/report_seeds.py --dataset imdb --task movie_director \
+  --zeroshot results/motif_zeroshot_imdb_lp_md_full \
+  --finetune results/motif_finetune_matrix_imdb_lp_md_seeds2_s* \
+  --baseline-tex ../SCR/INV-GNN-12D9/docs/results/IMDB_lp.tex
+```
+
+## 4. WN18RR (v1 no_changes, v2 all_inverse_edges, v3 transitive_edges)
+
+`script/wordnet_lp.py` follows CMPNN's WordNet protocol (`SCR/.../models/CMPNN/run_cmpnn_lp.py`):
+
+* MRR and Hits use filtered ranking over all 40,943 entities, for both head and tail queries,
+  with ties averaged.
+* Precision/Recall and τ use the positive plus 100 candidates drawn with each lab seed.
+* Fine-tuning trains on the official base-relation triples and removes only the exact batch
+  edges.
+
+The released checkpoint was **pretrained on WN18RR**, so its "zero-shot" rows are not
+zero-shot. v3 (537 relations) needs about 45 GB, so all WordNet runs use one H200:
+
+```bash
+sbatch -p dgxh --constraint=h200 --array=0-2 --export=ALL,MODE=eval,RUN_TAG=full slurm/wordnet.sbatch
+sbatch -p dgxh --constraint=h200 --array=0-8 --export=ALL,MODE=finetune,RUN_TAG=seeds slurm/wordnet.sbatch
+python script/report_seeds.py --dataset wordnet \
+  --zeroshot results/motif_zeroshot_wordnet_lp_full \
+  --finetune results/motif_finetuned_wordnet_lp_seeds_s* \
+  --baseline-tex ../SCR/INV-GNN-12D9/docs/results/WN18RR_lp.tex
+```
+
+## 5. Overleaf
+
+`results/overleaf/motif_seed_tables/main.tex` is a standalone file that collects every
+`seed_summary_*` table. Upload that single file to Overleaf.
+
+Git tracks only `results/overleaf/` and the `results/{seed,zeroshot}_summary_*` tables.
+Per-run outputs (checkpoints, scores, histories, logs) stay on the HPC.
