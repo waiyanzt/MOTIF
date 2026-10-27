@@ -1,0 +1,19 @@
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{||l||l||c||}
+\hline
+\textbf{Method} & \textbf{Comparison} & \textbf{Kendall-$\tau$} \\
+\hline\hline
+CMPNN & v1 vs v3 & $0.7819 \pm 0.0238$ \\
+\hline
+\hline
+MOTIF (ZS) & v1 vs v3 & $0.8343 \pm 0.0000$ \\
+\hline
+\hline
+MOTIF (FT) & v1 vs v3 & $0.7815 \pm 0.0151$ \\
+\hline
+\end{tabular}
+\caption{IMDb Movie--Director Kendall-$\tau_b$ between candidate rankings of two variants' models on the same queries, averaged over queries. Mean $\pm$ population std over training seeds (20241017, 20251017, 1566911444); zero-shot has no training seed (std 0). }
+\label{tab:imdb_movie_director_seed_invariance}
+\end{table}
